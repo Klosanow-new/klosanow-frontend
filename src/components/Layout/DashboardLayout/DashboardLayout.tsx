@@ -5,6 +5,7 @@ import NotificationModal from "../../Modals/NotificationModal/NotificationModal"
 import { getToken } from "src/utils/constant";
 import { useEffect } from "react";
 import { sampleNotifications } from "src/pages/Notifications/Notifications";
+import MobileNoticeModal from "src/pages/Dashboard/components/MobileNotice";
 
 const DashboardLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -22,13 +23,13 @@ const DashboardLayout = () => {
           notificationCtrl={onOpen}
           notificationLength={sampleNotifications.length}
         />
+        <NotificationModal
+          isOpen={isOpen}
+          onClose={onClose}
+          notifications={sampleNotifications}
+        />
+        <MobileNoticeModal />
         <Box width="full" overflow={"scroll"} h="calc(100vh - 60px)">
-          <NotificationModal
-            isOpen={isOpen}
-            onClose={onClose}
-            notifications={sampleNotifications}
-          />
-
           <Outlet />
 
           <BottomNav />

@@ -35,8 +35,6 @@ export default function ResetPassword() {
 
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  console.log(token);
-
   const resetSlide = slides[2];
 
   const { mutate, isLoading } = useMutation(ResetPasswordApi, {

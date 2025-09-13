@@ -21,7 +21,6 @@ export const signUpApi = async (
 export const forgotPasswordApi = async (
   forgetPayload: forgotValues
 ): Promise<AuthResponseInterface> => {
-  console.log("Forgot Password Payload:", forgetPayload);
   const { data } = await Axios.post("/auth/forgot-password", forgetPayload);
   return data;
 };
