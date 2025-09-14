@@ -1,4 +1,4 @@
-import { Flex, Text, Avatar } from "@chakra-ui/react";
+import { Flex, Avatar } from "@chakra-ui/react";
 import React from "react";
 import { BiBell } from "react-icons/bi";
 import { Link } from "react-router-dom";
@@ -7,16 +7,18 @@ interface DashboardHeaderMobileProps {
   notificationLength: number;
 }
 
-const DashboardHeaderMobile: React.FC<DashboardHeaderMobileProps> = ({
-  notificationLength,
-}) => {
+const DashboardHeaderMobile: React.FC<DashboardHeaderMobileProps> = (
+  {
+    // notificationLength,
+  }
+) => {
   return (
     <Flex justify={"space-between"} align={"center"} display={["flex", "none"]}>
       <Avatar name="KlosaNow" src="/avatar.jpg" size="lg" />
 
-      <Link to="/notifications" style={{ position: "relative" }}>
+      <Link to="" style={{ position: "relative" }}>
         <BiBell fontSize={25} />
-        <Text
+        {/* <Text
           style={{
             display: "flex",
             position: "absolute",
@@ -33,7 +35,7 @@ const DashboardHeaderMobile: React.FC<DashboardHeaderMobileProps> = ({
           }}
         >
           {notificationLength}
-        </Text>
+        </Text> */}
       </Link>
     </Flex>
   );

@@ -33,7 +33,7 @@ export const getLessonContentActions = (
   <Box
     mt={{
       base: !isScrollContent ? "120px" : 0,
-      md: !isScrollContent ? "64px" : 0,
+      md: !isScrollContent ? "13vh" : 0,
     }}
   >
     <Flex
