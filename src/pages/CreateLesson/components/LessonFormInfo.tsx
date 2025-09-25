@@ -184,13 +184,14 @@ const LessonFormInfo: React.FC = () => {
         initialValues={form_info}
         onSubmit={handleNext}
         validationSchema={createLessonValidationSchema}
+        validateOnMount={true}
       >
         {({
           values,
           touched,
           errors,
           isSubmitting,
-          isValid,
+          // isValid,
           handleBlur,
           handleChange,
           handleSubmit,
@@ -404,7 +405,9 @@ const LessonFormInfo: React.FC = () => {
                   {...btnStyles()}
                   bg={colors.primary[50]}
                   color={colors.neutral[10]}
-                  isDisabled={!isValid}
+                  isDisabled={
+                    !values.title || !values.description || !values.thumbnailUrl
+                  }
                   _hover={{ opacity: 0.9 }}
                   isLoading={isSubmitting}
                   type="submit"
