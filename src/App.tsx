@@ -39,6 +39,7 @@ import {
   getStorageItem,
   removeStorageItem,
 } from "./utils/generics";
+import { InviteLink } from "./pages/StudyChat/flyouts";
 import { CHAT_CONTACT_KEY } from "./data/constants";
 import { useToast } from "@chakra-ui/react";
 
@@ -109,6 +110,8 @@ function App() {
               />
 
               <Route path={`${studyChatPagePath}/*`} element={<StudyChat />} />
+
+              <Route path="/invite" element={<InviteLink />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route
                 path="/settings/notifications"

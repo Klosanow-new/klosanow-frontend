@@ -11,6 +11,7 @@ import {
   Image,
   Text,
   useToast,
+  Icon,
 } from "@chakra-ui/react";
 import { StudyChatContext } from "../../context/StudyChat";
 import {
@@ -19,7 +20,7 @@ import {
   CloseIcon,
   InfoIcon,
   LeaveIcon,
-  ReportIcon,
+  // ReportIcon,
 } from "../../assets/svgs";
 import { ChatType } from "../../../../types/studyChat";
 import { colors } from "../../../../data/colors";
@@ -29,7 +30,7 @@ import { flyoutActionsStyles } from "../../data/styles";
 import { useNavigate } from "react-router-dom";
 import { contactsPagePath } from "../../../../data/pageUrl";
 import { useStoreSelector } from "src/redux/hooks";
-
+import { FaLink } from "react-icons/fa";
 const ChatDetailFlyout: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -140,7 +141,7 @@ const ChatDetailFlyout: React.FC = () => {
               h="64px"
               bg={colors.primary[10]}
               alignItems="center"
-              p="0 50px"
+              p={4}
               mt="20px"
               justifyContent="space-between"
             >
@@ -161,7 +162,7 @@ const ChatDetailFlyout: React.FC = () => {
             h="64px"
             bg={colors.primary[10]}
             alignItems="center"
-            p="0 44px"
+            p={4}
             mt="20px"
             justifyContent="space-between"
           >
@@ -171,7 +172,7 @@ const ChatDetailFlyout: React.FC = () => {
 
           {isGroupChat && (
             <Box m="20px 0 60px">
-              <Box bg={colors.primary[10]} h="120px" p="12px 47px">
+              <Box bg={colors.primary[10]} h="120px" px={4} py={2}>
                 <Text fontSize="14px" fontWeight="500">
                   Created By
                 </Text>
@@ -195,7 +196,7 @@ const ChatDetailFlyout: React.FC = () => {
                 </Flex>
               </Box>
 
-              <Box minH="120px" mt="20px" bg={colors.primary[10]} p="12px 47px">
+              <Box minH="120px" mt="20px" bg={colors.primary[10]} p={4}>
                 <Text fontSize="14px" fontWeight="500">
                   Learners
                 </Text>
@@ -229,12 +230,17 @@ const ChatDetailFlyout: React.FC = () => {
                 </Flex>
               </Box>
 
-              <Box bg={colors.primary[10]} h="102px" p="12px 47px" mt="20px">
+              <Box bg={colors.primary[10]} h="102px" px={4} py={2} mt="20px">
                 <Text fontSize="14px" fontWeight="500">
                   Actions
                 </Text>
 
-                <Flex gap="20px" alignItems="center" padding="12px">
+                <Flex
+                  gap="20px"
+                  align="center"
+                  alignItems="center"
+                  padding="12px"
+                >
                   {isUser && (
                     <Flex
                       as="button"
@@ -255,13 +261,58 @@ const ChatDetailFlyout: React.FC = () => {
                       }}
                     >
                       <AddLearnersIcon />
-                      <Text>Add Learners</Text>
+                      <Text color="red">Add Learners</Text>
                     </Flex>
                   )}
 
-                  <Flex as="button" {...flyoutActionsStyles}>
+                  {/* <Flex as="button" {...flyoutActionsStyles}>
                     <ReportIcon />
                     <Text>Report</Text>
+                  </Flex> */}
+
+                  <Flex
+                    as="button"
+                    {...flyoutActionsStyles}
+                    onClick={() => {
+                      if (!activeChat?.id) {
+                        toast({
+                          title: "Error",
+                          description: "Unable to copy link",
+                          duration: 3000,
+                          isClosable: true,
+                          status: "error",
+                        });
+                        return;
+                      }
+
+                      const inviteUrl = `${window.location.origin}/invite?group=${activeChat?.id}`;
+                      navigator.clipboard
+                        .writeText(inviteUrl)
+                        .then(() => {
+                          toast({
+                            title: "Link copied!",
+                            description:
+                              "You can share this  link with others to join the group",
+                            status: "success",
+                            duration: 3000,
+                            isClosable: true,
+                          });
+                          console.log("Invite link copied:", inviteUrl);
+                        })
+                        .catch((err) => {
+                          console.error("failed to copy link", err);
+                          toast({
+                            title: "Copy failed",
+                            description: "Please try again later",
+                            status: "error",
+                            duration: 3000,
+                            isClosable: true,
+                          });
+                        });
+                    }}
+                  >
+                    <Icon as={FaLink} boxSize={5} color="primary.50" />
+                    <Text>Copy Link</Text>
                   </Flex>
 
                   <Flex

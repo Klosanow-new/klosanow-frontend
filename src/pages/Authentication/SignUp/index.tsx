@@ -28,6 +28,7 @@ import { OnboardingSlides } from "../..";
 import logo from "../../../assets/SplashScreenImg/SplashLogo.png";
 import { slides } from "../../Onboarding/utils/SlideData";
 import PhoneInput from "react-phone-input-2";
+
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 const MyPhoneInput = PhoneInput.default ? PhoneInput.default : PhoneInput;
