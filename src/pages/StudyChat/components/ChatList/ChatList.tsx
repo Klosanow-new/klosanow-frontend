@@ -1,5 +1,13 @@
 import React from "react";
-import { Box, Button, Flex, Heading, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Circle,
+  Flex,
+  Heading,
+  Image,
+  Text,
+} from "@chakra-ui/react";
 import ChatListItem from "./ChatListItem";
 import { uniqueId } from "lodash";
 import { ChatListData } from "../../../../types/studyChat";
@@ -10,7 +18,7 @@ import {
 } from "../../../../data/pageUrl";
 import { BsChatLeftText } from "react-icons/bs";
 import { ContactIcon } from "src/assets/svgs";
-
+import Klosanow from "src/assets/images/klosanow.png";
 interface ChatListProps {
   list: ChatListData[] | null;
 }
@@ -57,6 +65,22 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
             Create Study Group
           </Button>
         </Flex>
+      </Flex>
+
+      <Flex
+        gap="20px"
+        p={2}
+        align="center"
+        borderBottomWidth={"2px"}
+        cursor="pointer"
+        onClick={() => navigate("/study-chat/ai")}
+      >
+        <Flex align="center" gap="10px">
+          <Circle size="50px" bg="primary.100">
+            <Image src={Klosanow} alt="AI" />
+          </Circle>
+        </Flex>
+        <Text>Klosanow AI</Text>
       </Flex>
 
       {list && list.length > 0 ? (
