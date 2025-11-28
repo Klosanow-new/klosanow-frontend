@@ -95,6 +95,8 @@ const AIChatPage = () => {
 
   return (
     <Box
+      display="flex"
+      flexDir="column"
       bg="#fff"
       w="100%"
       h="100vh"
@@ -137,8 +139,9 @@ const AIChatPage = () => {
 
       {/* BODY */}
       <Flex
+        flex={1}
         flexDir="column"
-        overflowY="scroll"
+        overflowY="auto"
         h="calc(100vh - 130px)"
         px="16px"
         py="12px"
@@ -164,7 +167,7 @@ const AIChatPage = () => {
               >
                 {!isUser && (
                   <Text fontSize="10px" fontWeight="bold" color="purple.500">
-                    AI Tutor
+                    Klosanow AI
                   </Text>
                 )}
                 <Text fontSize="14px" whiteSpace="pre-wrap">
