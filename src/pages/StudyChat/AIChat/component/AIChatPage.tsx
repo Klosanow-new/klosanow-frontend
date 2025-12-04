@@ -5,23 +5,24 @@ import {
   Text,
   Circle,
   Image,
-  Input,
   IconButton,
   Spinner,
-  Icon,
+  Textarea,
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { IoSend } from "react-icons/io5";
 import BOT_AVATAR from "src/assets/images/klosanow.png";
 import { FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-
+import { colors } from "src/data/colors";
+import { containerAnimation } from "../../data";
+import ReactMarkdown from "react-markdown";
 interface Message {
   sender: "user" | "bot";
   text: string;
 }
 
-const KlosanowAPI = "https://klosanow-ai.pxxl.click";
+const KlosanowAPI = "https://chat.klosanow.com";
 
 const AIChatPage = () => {
   const navigate = useNavigate();
@@ -32,8 +33,6 @@ const AIChatPage = () => {
       text: "Hello! I'm Klosanow AI. How can I help you today?",
     },
   ]);
-
-  console.log(messages);
 
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -47,15 +46,18 @@ const AIChatPage = () => {
 
   const formatBotMessage = (text: string) => {
     if (!text) return "";
-
-    let cleaned = text.replace(/\*/g, "").replace(/_/g, "").replace(/~/g, "");
-    cleaned = cleaned.replace(/\s+/g, " ");
+    return text.replace(/\*/g, "").replace(/_/g, "").trim();
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim()) {
+      setInput("");
+      return;
+    }
 
-    const userMessage: Message = { sender: "user", text: input };
+    const cleanInput = input.trim();
+
+    const userMessage: Message = { sender: "user", text: cleanInput };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -71,7 +73,6 @@ const AIChatPage = () => {
       });
 
       const data = await res.json();
-      console.log("Data from backend", data, res);
 
       const botMessage: Message = {
         sender: "bot",
@@ -95,17 +96,27 @@ const AIChatPage = () => {
 
   return (
     <Box
-      display="flex"
-      flexDir="column"
-      bg="#fff"
-      w="100%"
-      h="100vh"
-      maxW="653px"
-      position="fixed"
-      right="0"
-      top="0"
-      zIndex={50}
       as={motion.div}
+      animation={containerAnimation}
+      display="flex"
+      flexDir={"column"}
+      padding={["0 0 10px", "60px 0 0"]}
+      initial="hidden"
+      animate="show"
+      maxW={{
+        base: "500px",
+        lg: "380px",
+        xl: "653px",
+      }}
+      w="100%"
+      h="100dvh"
+      top="0"
+      right="0"
+      position="fixed"
+      background="#fff"
+      zIndex={10}
+
+      // flex={1}
     >
       {/* HEADER */}
       <Flex
@@ -116,11 +127,13 @@ const AIChatPage = () => {
         boxShadow="sm"
         gap="10px"
       >
-        <Icon
-          as={FaArrowLeft}
-          boxSize={6}
+        <IconButton
+          aria-label="back"
+          icon={<FaArrowLeft />}
+          //   boxSize={6}
           color="neutral.100"
           cursor="pointer"
+          variant="ghost"
           onClick={() => navigate(-1)}
         />
         <Circle size="45px" bg="primary.100" overflow="hidden">
@@ -142,10 +155,8 @@ const AIChatPage = () => {
         flex={1}
         flexDir="column"
         overflowY="auto"
-        h="calc(100vh - 130px)"
-        px="16px"
-        py="12px"
-        gap="12px"
+        p={"10px 16px 0"}
+        gap="10px"
       >
         {messages.map((msg, index) => {
           const isUser = msg.sender === "user";
@@ -154,7 +165,7 @@ const AIChatPage = () => {
             <Flex
               key={index}
               justify={isUser ? "flex-end" : "flex-start"}
-              w="100%"
+              maxW="100%"
             >
               <Flex
                 bg={isUser ? "#D3C7FB" : "#F3ECF8"}
@@ -170,9 +181,44 @@ const AIChatPage = () => {
                     Klosanow AI
                   </Text>
                 )}
-                <Text fontSize="14px" whiteSpace="pre-wrap">
-                  {msg.text}
-                </Text>
+
+                <ReactMarkdown
+                  children={msg.text}
+                  components={{
+                    p: (props) => (
+                      <Text
+                        fontSize="14px"
+                        mb="6px"
+                        wordBreak={"break-word"}
+                        overflowWrap={"anywhere"}
+                        {...props}
+                      />
+                    ),
+                    strong: (props) => (
+                      <b
+                        style={{
+                          fontWeight: 700,
+                          wordBreak: "break-word",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {props.children}
+                      </b>
+                    ),
+                    li: (props) => (
+                      <li
+                        style={{
+                          marginLeft: "16px",
+                          marginBottom: "4px",
+                          wordBreak: "break-word",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {props.children}
+                      </li>
+                    ),
+                  }}
+                />
               </Flex>
             </Flex>
           );
@@ -190,7 +236,7 @@ const AIChatPage = () => {
               align="center"
             >
               <Spinner size="sm" />
-              <Text>Thinking...</Text>
+              <Text>...</Text>
             </Flex>
           </Flex>
         )}
@@ -200,27 +246,52 @@ const AIChatPage = () => {
 
       {/* FOOTER */}
       <Flex
-        h="65px"
-        p="12px 16px"
+        bg={colors.primary[5]}
+        // p="10px"
+        position="sticky"
+        bottom={0}
         borderTop="1px solid #eee"
-        align="center"
-        gap="10px"
+        zIndex={20}
+        pb="max(env(safe-area-inset-bottom), 10px)"
       >
-        <Input
-          placeholder="Type your message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          bg="#f7f7f7"
-        />
+        <Flex
+          maxW="552px"
+          bg={colors.primary[5]}
+          w="100%"
+          p="13px"
+          // p="13px 17px 14px"
+          borderRadius="10px"
+          alignItems={"center"}
+          gap={"16px"}
+          position="relative"
+        >
+          <Textarea
+            placeholder="Type your message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && !e.shiftKey
+                ? (e.preventDefault(), handleSend())
+                : null
+            }
+            resize={"none"}
+            rows={1}
+            bg="#f7f7f7"
+            borderRadius="12px"
+            _focus={{ borderColor: "primary.100" }}
+            flex={1}
+            p={4}
+            overflowY={"auto"}
+          />
 
-        <IconButton
-          aria-label="send"
-          icon={<IoSend />}
-          colorScheme="purple"
-          onClick={handleSend}
-          isDisabled={loading}
-        />
+          <IconButton
+            aria-label="send"
+            icon={<IoSend />}
+            colorScheme="purple"
+            onClick={handleSend}
+            isDisabled={loading || !input.trim()}
+          />
+        </Flex>
       </Flex>
     </Box>
   );

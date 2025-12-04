@@ -4,6 +4,7 @@ export const studyChatPagePath = `/${studyChatPageSlug}`;
 export const createStudyChatSlug = "create";
 export const createStudyChatPath = `${studyChatPagePath}/${createStudyChatSlug}`;
 export const contactsPageSlug = "contacts";
+export const AIStudychat = "ai";
 export const contactsPagePath = `${studyChatPagePath}/${contactsPageSlug}`;
 // Dashboard routes
 export const dashboardPageSlug = "dashboard";
