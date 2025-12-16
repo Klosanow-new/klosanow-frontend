@@ -69,16 +69,19 @@ const useMediaRecorder = () => {
     });
   };
 
-  const stopRecording = async () => {
-    if (!recorderRef.current) return;
+  const stopRecording = async (): Promise<Blob | null> => {
+    if (!recorderRef.current) return null;
 
     await recorderRef.current?.stopRecording();
     state.stream?.getTracks().forEach((track) => track.stop());
 
+    const blob = await recorderRef.current.getBlob();
     handleStateUpdate({
-      blob: await recorderRef.current.getBlob(),
+      blob,
       status: "stopped",
     });
+
+    return blob;
   };
 
   return {

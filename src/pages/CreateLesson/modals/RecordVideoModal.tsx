@@ -139,11 +139,47 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
       loadingMessage: "Uploading...",
     });
 
-    await new Promise<void>((resolve) => {
-      stopRecording();
-      setTimeout(resolve, 10); // small async delay
-    });
+    // Call stopRecording directly
+    const recordedBlob = await stopRecording(); // ensure stopRecording returns Blob | null
+
+    if (!recordedBlob) {
+      toast({
+        description: "Recording failed, please try again",
+        status: "error",
+        duration: 3000,
+        position: "top-right",
+      });
+      handleStateUpdate({ loading: false });
+      return;
+    }
+
+    handleVideoUpload(recordedBlob);
   };
+
+  //   handleStateUpdate({
+  //     loading: true,
+  //     loadingMessage: "Uploading...",
+  //   });
+
+  //   const recordedBlob = await stopRecording();
+  //   if (!recordedBlob) {
+  //     toast({
+  //       description: "Recording failed,please try again",
+  //       status: "error",
+  //       duration: 3000,
+  //       position: "top-right",
+  //     });
+  //     handleStateUpdate({ loading: false });
+  //     return;
+  //   }
+
+  //   handleVideoUpload(recordedBlob);
+
+  //   // await new Promise<void>((resolve) => {
+  //   //   stopRecording();
+  //   //   setTimeout(resolve, 10); // small async delay
+  //   // });
+  // };
   const handleVideoUpload = async (blob: Blob) => {
     handleStateUpdate({
       loading: true,

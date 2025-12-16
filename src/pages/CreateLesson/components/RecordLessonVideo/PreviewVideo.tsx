@@ -104,7 +104,7 @@ const PreviewVideo = () => {
         title: error.message ?? error.response ?? "Something went wrong",
         description: "Try again later",
         status: "error",
-        duration: 2500,
+        duration: 3000,
         position: "top-right",
       });
     }
