@@ -8,7 +8,7 @@ interface MessageOwner {
 
 const Message = (props:MessageOwner) => {
   const { owner, text } = props;
-  const bot = (owner == "bot");
+  const bot = (owner === "bot");
 
   return (
     <Box w="80%" className={`${owner}`}>

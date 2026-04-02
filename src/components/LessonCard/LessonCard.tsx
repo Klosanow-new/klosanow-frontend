@@ -55,17 +55,16 @@ const LessonCard: React.FC<LessonCardProps> = ({
 
     if (video.duration === Infinity) return;
 
-    const vidDurArr = video.duration.toString().split(".");
+    const totalSeconds = Math.floor(video.duration);
+    const hr = Math.floor(totalSeconds / 3600);
+    const min = Math.floor((totalSeconds % 3600) / 60);
+    const sec = totalSeconds % 60;
 
-    const vidHr = vidDurArr[vidDurArr.length - 4];
-    const vidMin = vidDurArr[vidDurArr.length - 3];
-    const vidSec = vidDurArr[vidDurArr.length - 2];
+    const vidHrValue = hr > 0 ? `${hr}:` : "";
+    const vidMinValue = `${hr > 0 ? String(min).padStart(2, "0") : min}:`;
+    const vidSecValue = String(sec).padStart(2, "0");
 
-    const vidHrValue = vidHr ? `${vidHr}:` : "";
-    const vidMinValue = vidMin ? `${vidMin}:` : "";
-    const vidSecValue = vidSec ? `${vidSec}:` : "";
-
-    const vidDur = `${vidHrValue}${vidMinValue}:${vidSecValue}`;
+    const vidDur = `${vidHrValue}${vidMinValue}${vidSecValue}`;
 
     setDuration(vidDur);
   };
@@ -96,7 +95,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
       border={"1px solid #eee"}
       borderRadius={12}
       overflow={"hidden"}
-      onClick={() => (hasWatch ? () => null : handleWatch(lesson))}>
+      onClick={() => { if (!hasWatch) handleWatch(lesson); }}>
       <Box position="relative">
         <Image
           width="full"

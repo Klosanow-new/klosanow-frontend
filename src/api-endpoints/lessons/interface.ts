@@ -1,5 +1,3 @@
-import { _token } from "../../utils/axios";
-
 export interface LessonResponseInterface {
   status: string;
   message: string;

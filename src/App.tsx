@@ -56,7 +56,7 @@ function App() {
       removeStorageItem(CHAT_CONTACT_KEY);
     }, 30000);
 
-    return () => clearInterval(timeout);
+    return () => clearTimeout(timeout);
   }, [storageContact]);
 
   useEffect(() => {
@@ -83,7 +83,7 @@ function App() {
       });
     }, 60000);
 
-    return () => clearInterval(timeout);
+    return () => clearTimeout(timeout);
   }, []);
 
   return (

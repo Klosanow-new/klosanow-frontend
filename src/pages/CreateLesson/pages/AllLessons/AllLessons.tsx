@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { capitalize, uniqueId } from "lodash";
+import { capitalize } from "lodash";
 
 import { EmptyState } from "src/components";
 import { Lesson, LessonType } from "src/types";
@@ -36,7 +36,7 @@ interface AllLessonsState {
   activeLesson: Lesson | null;
   showFlyout: boolean;
   loading: boolean;
-  actonType: "delete" | "share" | null;
+  actionType: "delete" | "share" | null;
 }
 
 const AllLessons: React.FC = () => {
@@ -50,7 +50,7 @@ const AllLessons: React.FC = () => {
     activeLesson: null,
     showFlyout: false,
     loading: false,
-    actonType: null,
+    actionType: null,
   };
 
   const [state, setState] = React.useState(initialState);
@@ -77,13 +77,13 @@ const AllLessons: React.FC = () => {
     state.type === LessonType.Created ? LessonType.Saved : LessonType.Created;
 
   const handleDelete = async (id: string) => {
-    handleStateUpdate({ loading: true, actonType: "delete" });
+    handleStateUpdate({ loading: true, actionType: "delete" });
 
     try {
       const res = await deleteLesson(id);
 
       if (!res) throw new Error("Unable to delete lesson");
-      handleStateUpdate({ loading: false, actonType: null });
+      handleStateUpdate({ loading: false, actionType: null });
       toast({
         title: "Lesson deleted succesfully",
         duration: 3000,
@@ -92,7 +92,7 @@ const AllLessons: React.FC = () => {
       });
       dispatch(fetchLessons());
     } catch (error) {
-      handleStateUpdate({ loading: false, actonType: null });
+      handleStateUpdate({ loading: false, actionType: null });
       toast({
         title: "Something went wrong",
         description: "Try again later",
@@ -113,7 +113,7 @@ const AllLessons: React.FC = () => {
       <OverlayLoader
         loading={state.loading}
         description={
-          state.actonType === "delete" ? "Deleting lesson" : "Sharing lesson"
+          state.actionType === "delete" ? "Deleting lesson" : "Sharing lesson"
         }
       />
       <Flex
@@ -168,7 +168,7 @@ const AllLessons: React.FC = () => {
             {lessonData.map((lesson) => (
               <LessonCard
                 lesson={lesson}
-                key={uniqueId(`lesson_${lesson._id}`)}
+                key={lesson._id}
                 handleWatch={(activeLesson) =>
                   handleStateUpdate({ showModal: true, activeLesson })
                 }

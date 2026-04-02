@@ -7,24 +7,22 @@ import { useEffect } from "react";
 export default function SplashScreen(): JSX.Element {
   const navigate = useNavigate();
 
-  const handleVisit = () => {
+  useEffect(() => {
     const value = localStorage.getItem("isFirstVisit");
 
     if (value === null) {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         navigate("/");
         localStorage.setItem("isFirstVisit", "true");
       }, 3000);
+      return () => clearTimeout(t);
     } else if (value === "true") {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         navigate("/sign-in");
       }, 3000);
+      return () => clearTimeout(t);
     }
-  };
-
-  useEffect(() => {
-    handleVisit();
-  }, []);
+  }, [navigate]);
   return (
     <AnimatePresence mode="wait">
       <motion.div

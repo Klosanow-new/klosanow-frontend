@@ -53,7 +53,7 @@ const getNavLinks = (isDesktop: boolean) => [
 
 const SideBar: React.FC = () => {
   const [isDesktop, setIsDesktop] = React.useState(
-    window.innerWidth <= DEVICE_SCREEN_SIZES.laptop_sm
+    window.innerWidth < DEVICE_SCREEN_SIZES.laptop_sm
   );
 
   const Links = getNavLinks(isDesktop);

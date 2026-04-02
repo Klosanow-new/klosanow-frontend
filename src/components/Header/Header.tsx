@@ -18,7 +18,7 @@ const Header = (props: headerInterface) => {
       <HiOutlineArrowLeft
         fontSize={20}
         onClick={() => {
-          history.back();
+          window.history.back();
         }}
       />
       {/* <Box width="fit-content">
@@ -38,7 +38,7 @@ const Header = (props: headerInterface) => {
           <HiArrowLeft
             fontSize={20}
             onClick={() => {
-              history.back();
+              window.history.back();
             }}
           />
         )}

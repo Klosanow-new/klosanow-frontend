@@ -1,5 +1,3 @@
-import { _token } from "../../utils/axios";
-
 export interface AuthResponseInterface {
   status: string;
   message: string;
