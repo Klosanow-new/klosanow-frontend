@@ -19,7 +19,11 @@ import { capitalize, uniqueId } from "lodash";
 import { useMarkerTool } from "./useMarkerTool";
 import { FaPen, FaEraser } from "react-icons/fa";
 import { MdClear, MdClose } from "react-icons/md";
-import { MdArrowBackIosNew, MdOutlineArrowForwardIos } from "react-icons/md";
+import {
+  MdArrowBackIosNew,
+  MdRefresh,
+  MdOutlineArrowForwardIos,
+} from "react-icons/md";
 import Draggable from "react-draggable";
 import { GiResize } from "react-icons/gi";
 import { RiDragMove2Line } from "react-icons/ri";
@@ -29,7 +33,11 @@ import { MoveIcon, PauseIcon, RecordIcon, StopRecordIcon } from "../assets";
 import { CreateLessonFormContext } from "../context/CreateLessonFormContext";
 // import { btnStyles } from "../data";
 import { PlayIcon } from "src/assets/svgs";
-import { FileUploadResponseStatus, uploadFile } from "src/utils/file-upload";
+import {
+  FileUploadResponseStatus,
+  uploadFile,
+  getUploadErrorMessage,
+} from "src/utils/file-upload";
 import OverlayLoader from "src/components/OverlayLoader/OverlayLoader";
 import { setFileUrl } from "src/utils/constant";
 
@@ -84,6 +92,7 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
   const [state, setState] = React.useState(initialState);
   const [hoverErase, setHoverErase] = React.useState(false);
   const [runTour, setRunTour] = React.useState(false);
+  const [failedBlob, setFailedBlob] = React.useState<Blob | null>(null);
 
   React.useEffect(() => {
     if (show) {
@@ -109,7 +118,7 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
   const { clearCanvas } = useMarkerTool(
     state.useMarkerTool,
     "record-slide-container",
-    hoverErase
+    hoverErase,
   );
 
   const { template, content, form_info, updateCreateLessonFormValues } =
@@ -117,7 +126,7 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
 
   const initialSlide = `
     <p style='font-size: 32px; font-weight: 500'>${capitalize(
-      form_info.title
+      form_info.title,
     )}</p>
     <p style='font-size: 18px; margin-top: 12px'>
       ${form_info.description}
@@ -156,30 +165,6 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
     handleVideoUpload(recordedBlob);
   };
 
-  //   handleStateUpdate({
-  //     loading: true,
-  //     loadingMessage: "Uploading...",
-  //   });
-
-  //   const recordedBlob = await stopRecording();
-  //   if (!recordedBlob) {
-  //     toast({
-  //       description: "Recording failed,please try again",
-  //       status: "error",
-  //       duration: 3000,
-  //       position: "top-right",
-  //     });
-  //     handleStateUpdate({ loading: false });
-  //     return;
-  //   }
-
-  //   handleVideoUpload(recordedBlob);
-
-  //   // await new Promise<void>((resolve) => {
-  //   //   stopRecording();
-  //   //   setTimeout(resolve, 10); // small async delay
-  //   // });
-  // };
   const handleVideoUpload = async (blob: Blob) => {
     handleStateUpdate({
       loading: true,
@@ -190,10 +175,25 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
         type: blob.type,
       });
 
-      const res = await uploadFile(file);
+      const res = await uploadFile(file, (percent) => {
+        handleStateUpdate({ loadingMessage: `Uploading... ${percent}%` });
+      });
+
       if (!res || !res.data || res.status !== FileUploadResponseStatus.Success)
         throw new Error("Something went wrong");
 
+      // Verify the uploaded size matches the original file size
+      const uploadedSize = res.data.size;
+      const originalSize = file.size;
+      const tolerance = 0.95; // allow 5% difference max
+
+      if (uploadedSize < originalSize * tolerance) {
+        throw new Error(
+          "Upload incomplete — file was cut short. Please retry.",
+        );
+      }
+
+      setFailedBlob(null);
       handleStateUpdate({ loading: false, loadingMessage: "" });
       updateCreateLessonFormValues({
         showPreviewVideo: true,
@@ -203,20 +203,42 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
       });
       setFileUrl("video_url", res.data?.url);
     } catch (error: any) {
-      handleStateUpdate({ loading: false });
+      handleStateUpdate({ loading: false, loadingMessage: "" });
+      setFailedBlob(blob);
+
+      // const errorMessage = getUploadErrorMessage(error);
+      const isConnectionIssue =
+        !navigator.onLine ||
+        error.code === "ERR_NETWORK" ||
+        error.message === "Network Error" ||
+        error.code === "ECONNABORTED";
+
+      const isStorageIssue =
+        error.response?.status === 403 ||
+        error.response?.status === 507 ||
+        error.response?.status === 500;
+
       toast({
-        description: "Unable to upload video",
-        title:
-          error.message ?? error.response?.message ?? "Something went wrong",
-        duration: 2500,
+        description: isConnectionIssue
+          ? "Your upload was interrupted. Check your connection and tap Retry."
+          : isStorageIssue
+            ? "Server storage issue. Please try again later."
+            : getUploadErrorMessage(error),
+        title: isConnectionIssue
+          ? "Connection Problem"
+          : isStorageIssue
+            ? " Insufficient storage"
+            : "Upload Failed",
+        duration: null,
         status: "error",
         position: "top-right",
+        isClosable: true,
       });
 
-      updateCreateLessonFormValues({
-        showPreviewVideo: false,
-        showRecordLessonModal: false,
-      });
+      // updateCreateLessonFormValues({
+      //   showPreviewVideo: false,
+      //   showRecordLessonModal: false,
+      // });
     }
   };
 
@@ -504,10 +526,30 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
                     <IconButton
                       aria-label="Cancel"
                       icon={<MdClose />} //
-                      onClick={handleClose}
+                      onClick={() => {
+                        setFailedBlob(null);
+                        handleClose();
+                      }}
                       size="sm"
                       isRound
                       colorScheme="blue"
+                    />
+                  </Tooltip>
+                )}
+                {/* Retry upload button — only shows when upload failed */}
+                {failedBlob && !state.loading && (
+                  <Tooltip label="Retry Upload" hasArrow>
+                    <IconButton
+                      aria-label="Retry Upload"
+                      icon={<MdRefresh />}
+                      onClick={() => {
+                        const blobToRetry = failedBlob;
+                        setFailedBlob(null);
+                        handleVideoUpload(blobToRetry);
+                      }}
+                      size="sm"
+                      isRound
+                      colorScheme="green"
                     />
                   </Tooltip>
                 )}

@@ -141,30 +141,44 @@ const PreviewVideo = () => {
 
   const getVideoDurationCallback = React.useCallback(() => {
     const video = videoRef.current;
-    let vidDuration = 0;
     if (!video) return;
 
-    video.addEventListener("load", () => {
-      if (video.duration !== Infinity) {
-        vidDuration = video.duration;
+    const handleMetadata = () => {
+      // Remote URLs often return Infinity — force a seek to resolve real duration
+      if (video.duration === Infinity || isNaN(video.duration)) {
+        video.currentTime = 1e101; // seek to a huge number
       }
-    });
+    };
 
-    const vidDurArr = vidDuration.toString().split(".");
+    const handleTimeUpdate = () => {
+      if (video.duration !== Infinity && !isNaN(video.duration)) {
+        const totalSeconds = Math.floor(video.duration);
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        handleStateUpdate({ duration: `${hrs}hrs:${mins}mins:${secs}secs` });
 
-    const vidHr = vidDurArr[vidDurArr.length - 4] || 0;
-    const vidMin = vidDurArr[vidDurArr.length - 3] || 0;
-    const vidSec = vidDurArr[vidDurArr.length - 2] || 0;
+        // Reset playback position and remove listener once we have the duration
+        video.currentTime = 0;
+        video.removeEventListener("timeupdate", handleTimeUpdate);
+      }
+    };
 
-    const vidDur = `${vidHr}hrs:${vidMin}mins:${vidSec}secs`;
+    video.addEventListener("loadedmetadata", handleMetadata);
+    video.addEventListener("timeupdate", handleTimeUpdate);
 
-    return handleStateUpdate({ duration: vidDur });
-  }, [videoRef.current]);
+    return () => {
+      video.removeEventListener("loadedmetadata", handleMetadata);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!videoRef.current) return;
-    getVideoDurationCallback();
-  }, [videoRef.current]);
+    const cleanup = getVideoDurationCallback();
+
+    return cleanup;
+  }, [getVideoDurationCallback]);
 
   return (
     <Flex flexDir="column" align="center">
@@ -200,7 +214,7 @@ const PreviewVideo = () => {
         gap="32px"
       >
         <Text color="#fff" mr="24px" fontWeight={500}>
-          {state.duration}
+          {state?.duration}
         </Text>
         <Flex
           as="button"

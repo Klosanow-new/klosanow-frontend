@@ -10,8 +10,12 @@ interface UploadFileRequest {
     size: number;
   } | null;
 }
+type UploadFileAction = (
+  file: File,
+  onProgress?: (percent: number) => void,
+) => Promise<UploadFileRequest>;
 
-type UploadFileAction = (file: File) => Promise<UploadFileRequest>;
+// type UploadFileAction = (file: File) => Promise<UploadFileRequest>;
 
 export enum FileUploadResponseStatus {
   Success = "success",
@@ -20,73 +24,74 @@ export enum FileUploadResponseStatus {
 }
 
 export const validateFile = (file: File) => {
-  const responseData = {
-    [FileUploadResponseStatus.Success]: {
-      status: FileUploadResponseStatus.Failed,
-      message: `${file.name.substring(0, 10)} size is too big`,
-    },
-    [FileUploadResponseStatus.Failed]: {
-      status: FileUploadResponseStatus.Success,
-      message: `${file.name.substring(0, 10)} uploaded successfully`,
-    },
-    [FileUploadResponseStatus.Invalid]: {
-      status: FileUploadResponseStatus.Invalid,
-      message: `Invalid file type`,
-    },
-  };
-
   const byte = 1024;
-
-  const size = Math.floor(file.size / byte);
+  const size = Math.floor(file.size / byte); // size in KB
 
   const fileSizeLimit = {
-    image: 3000,
-    video: 20000,
-    audio: 5000,
+    image: 3000, // 3MB
+    video: 500000, // 500MB — increase from 20MB
+    audio: 5000, // 5MB
   };
 
   const allowedTypes = ["video", "audio", "image"];
+  const fileType = file.type.split("/")[0];
 
-  const isVideo = file.type.includes("video") && size > fileSizeLimit.video;
-  const isAudio = file.type.includes("audio") && size > fileSizeLimit.audio;
-  const isImage = file.type.includes("image") && size > fileSizeLimit.image;
-
-  if (!allowedTypes.includes(file.type.split("/")[0])) {
-    return responseData[FileUploadResponseStatus.Invalid];
+  if (!allowedTypes.includes(fileType)) {
+    return {
+      status: FileUploadResponseStatus.Invalid,
+      message: "Invalid file type",
+    };
   }
 
-  if (isAudio || isImage || isVideo) {
-    return responseData[FileUploadResponseStatus.Success];
-  } else {
-    return responseData[FileUploadResponseStatus.Failed];
+  const isTooBig =
+    (fileType === "video" && size > fileSizeLimit.video) ||
+    (fileType === "audio" && size > fileSizeLimit.audio) ||
+    (fileType === "image" && size > fileSizeLimit.image);
+
+  if (isTooBig) {
+    return {
+      status: FileUploadResponseStatus.Failed,
+      message: `${file.name.substring(0, 10)} size is too big`,
+    };
   }
+
+  return {
+    status: FileUploadResponseStatus.Success,
+    message: `${file.name.substring(0, 10)} uploaded successfully`,
+  };
 };
 
-export const uploadFile: UploadFileAction = async (mediaFile: File) => {
+export const uploadFile: UploadFileAction = async (
+  mediaFile: File,
+  onProgress?: (percent: number) => void, // optional callback
+) => {
   const validator = validateFile(mediaFile);
   const token = getToken();
 
   if (validator.status !== FileUploadResponseStatus.Success) {
-    return {
-      ...validator,
-      data: null,
-    };
-  } else {
-    const res = await Axios.post(
-      `${mediaRoute}`,
-      { mediaFile },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    if (!res || !res.data) return;
-
-    return res.data;
+    return { ...validator, data: null };
   }
+
+  const formData = new FormData();
+  formData.append("mediaFile", mediaFile);
+
+  const res = await Axios.post(`${mediaRoute}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total && onProgress) {
+        const percent = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total,
+        );
+        onProgress(percent);
+      }
+    },
+  });
+
+  if (!res || !res.data) return;
+  return res.data;
 };
 
 export const deletedFile = async (fileUrl: string) => {
@@ -104,4 +109,41 @@ export const deletedFile = async (fileUrl: string) => {
       data: null,
     };
   } else return result.data as Omit<UploadFileRequest, "data">;
+};
+
+export const getUploadErrorMessage = (error: any): string => {
+  // No internet connection
+  if (!navigator.onLine) {
+    return "No internet connection. Please check your network and try again.";
+  }
+
+  // Axios network error (request never reached server)
+  if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+    return "Network error. Please check your connection and try again.";
+  }
+
+  // Request timeout
+  if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+    return "Upload timed out. Your video may be too large or your connection too slow.";
+  }
+
+  // Server responded with error status
+  if (error.response) {
+    const status = error.response.status;
+
+    if (status === 413) {
+      return "File is too large for the server to accept. Please record a shorter video.";
+    }
+    if (status === 507 || status === 500) {
+      return "Server storage issue. Please try again later or contact support.";
+    }
+    if (status === 401 || status === 403) {
+      return "Session expired. Please log in again.";
+    }
+    if (status >= 500) {
+      return "Server error. Please try again later.";
+    }
+  }
+
+  return error.message ?? "Something went wrong. Please try again.";
 };
