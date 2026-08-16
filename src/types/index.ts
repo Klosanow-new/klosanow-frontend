@@ -2,3 +2,4 @@ export * from "./auth/authInterface";
 export * from "./components/componetInterface";
 export * from "./lessons";
 export * from "./studyChat";
+export * from "./notifications";

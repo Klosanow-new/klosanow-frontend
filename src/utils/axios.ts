@@ -1,5 +1,6 @@
 import Axios from "axios";
-import { USER } from "./constant";
+import { USER, getToken } from "./constant";
+import { APP_BASE_URL } from "../data/env";
 
 export const _token = USER()?.token || "";
 
@@ -33,4 +34,36 @@ AxiosInstance.interceptors.response.use(
   }
 );
 
-export { AxiosInstance };
+// Instance for endpoints served from the non-MVP base url (e.g. web push).
+// The token is resolved per request rather than at module load, so it stays
+// correct across a sign-in without a page refresh.
+const BaseAxiosInstance = Axios.create({
+  baseURL: APP_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+BaseAxiosInstance.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+BaseAxiosInstance.interceptors.response.use(
+  function (config) {
+    return config;
+  },
+  function (error) {
+    if (error?.response?.status === 401) {
+      localStorage.clear();
+      window.location.replace("/sign-in");
+    }
+    return Promise.reject(error);
+  }
+);
+
+export { AxiosInstance, BaseAxiosInstance };

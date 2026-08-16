@@ -71,14 +71,12 @@ const MobileSettings = () => {
             <SettingsItem
               imageSrc={userImg}
               text="Info"
-              // link="/info"
-              link="#"
+              link="/info"
             />
             <SettingsItem
               imageSrc={bell}
               text="Notification"
-              link="#"
-              // link="/settings/notifications"
+              link="/settings/notifications"
             />
           </Box>
 
@@ -87,8 +85,7 @@ const MobileSettings = () => {
             <SettingsItem
               imageSrc={cloud}
               text="Storage"
-              link="#"
-              // link="/free"
+              link="/free"
             />
           </Box>
 
@@ -96,8 +93,7 @@ const MobileSettings = () => {
             <SettingsItem
               imageSrc={help}
               text="Help"
-              link="#"
-              // link="/help"
+              link="/help"
             />
             <SettingsItem
               imageSrc={group}

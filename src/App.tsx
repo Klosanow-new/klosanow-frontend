@@ -33,7 +33,10 @@ import {
 } from "./data/pageUrl";
 import useChatWebSocket from "./hooks/useChatWebSocket";
 // import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useStoreDispatch, useStoreSelector } from "./redux/hooks";
+import { fetchChats, fetchStudyChats } from "./api-endpoints/studyChat";
 import {
   clearIncompleteStorageFile,
   getStorageItem,
@@ -41,13 +44,134 @@ import {
 } from "./utils/generics";
 import { InviteLink } from "./pages/StudyChat/flyouts";
 import { CHAT_CONTACT_KEY } from "./data/constants";
-import { useToast } from "@chakra-ui/react";
+import { useToast, Box } from "@chakra-ui/react";
+import { getSingleUser } from "./api-endpoints/user/user.api";
+import { updateUserData, addNotification } from "./redux/reducers/userReducer";
 
 function App() {
   const location = useLocation();
-  useChatWebSocket();
+  const navigate = useNavigate();
+  const dispatch = useStoreDispatch();
+  const user = useStoreSelector((state) => state.user);
+  const { onNewMessage, isConnected } = useChatWebSocket();
   const storageContact = getStorageItem(CHAT_CONTACT_KEY);
   const toast = useToast();
+
+  const playChime = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioCtx = new AudioContextClass();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      oscillator.start();
+
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      oscillator.stop(audioCtx.currentTime + 0.4);
+    } catch (err) {
+      console.error("Audio chime failed:", err);
+    }
+  }, []);
+
+  const fetchUser = useCallback(async () => {
+    const userId = user.data?._id;
+    const token = user.token;
+    if (userId && token) {
+      try {
+        const response = await getSingleUser(userId, token);
+        dispatch(updateUserData(response as any));
+      } catch (err) {
+        console.error("Error updating user details:", err);
+      }
+    }
+  }, [user.data?._id, user.token, dispatch]);
+
+  // Refetch user profile on mount or when auth credentials change
+  useEffect(() => {
+    if (user.isAuth && user.token) {
+      fetchUser();
+    }
+  }, [user.isAuth, user.token, fetchUser]);
+
+  // Incoming messages while the app is open. Web push covers the closed/
+  // backgrounded case; this is the in-app half. Attached here and nowhere else —
+  // useChatWebSocket opens a socket per call site, so a second listener would
+  // double every toast.
+  useEffect(() => {
+    if (!isConnected) return;
+
+    return onNewMessage((payload) => {
+      const sender = payload?.sender;
+      const name = [sender?.firstName, sender?.lastName]
+        .filter(Boolean)
+        .join(" ");
+
+      // Play audio chime when message arrives
+      playChime();
+
+      toast({
+        title: name || "New message",
+        description: (
+          <Box
+            as="div"
+            cursor="pointer"
+            onClick={() => {
+              navigate("/study-chat");
+              toast.closeAll();
+            }}
+            _hover={{ textDecoration: "underline" }}
+            py="1"
+          >
+            {payload?.text || payload?.message || "Click to open chat"}
+          </Box>
+        ),
+        status: "info",
+        position: "top-right",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // Synchronize in-app notifications section immediately client-side
+      const notifObj = {
+        _id: payload._id || new Date().getTime().toString(),
+        sender: payload.sender,
+        message: payload.text || payload.message || "sent you a message",
+        action: "sent you a message",
+        createdAt: payload.createdAt || new Date().toISOString(),
+        isRead: false,
+      };
+      dispatch(addNotification(notifObj));
+
+      // Refresh the chat lists so unread state and previews stay current.
+      dispatch(fetchChats());
+      dispatch(fetchStudyChats());
+      // Refetch user profile to fetch any other new database notifications
+      fetchUser();
+    });
+  }, [isConnected, dispatch, fetchUser, toast, playChime, navigate]);
+
+  // The service worker posts this when an OS notification is clicked.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "NAVIGATE" && event.data.url) {
+        navigate(event.data.url);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+  }, [navigate]);
 
   // Remove chat from storage after 30 seconds
   useEffect(() => {

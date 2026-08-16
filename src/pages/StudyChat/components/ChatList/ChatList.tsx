@@ -22,9 +22,17 @@ import Klosanow from "src/assets/images/klosanow.png";
 interface ChatListProps {
   list: ChatListData[] | null;
 }
-
 const ChatList: React.FC<ChatListProps> = ({ list }) => {
   const navigate = useNavigate();
+
+  const sortedList = React.useMemo(() => {
+    if (!list) return [];
+    return [...list].sort((a, b) => {
+      const timeA = a.last_msg_time ? new Date(a.last_msg_time).getTime() : 0;
+      const timeB = b.last_msg_time ? new Date(b.last_msg_time).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [list]);
 
   return (
     <Box width="100%" maxWidth="523px" bg="#fafafa" p="24px 30px">
@@ -83,7 +91,7 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
         <Text>Klosanow AI</Text>
       </Flex>
 
-      {list && list.length > 0 ? (
+      {sortedList.length > 0 ? (
         <Flex
           gap="20px"
           flexDir="column"
@@ -95,7 +103,7 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
             lg: "13px",
           }}
         >
-          {list.map((item) => (
+          {sortedList.map((item) => (
             <ChatListItem data={item} key={uniqueId("chat-list")} />
           ))}
         </Flex>

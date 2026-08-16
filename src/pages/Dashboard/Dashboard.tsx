@@ -13,6 +13,8 @@ import { createLessonPagePath } from "src/data/pageUrl";
 import { DEVICE_SCREEN_SIZES } from "src/data/constants";
 import { WatchLessonModal } from "../CreateLesson";
 
+import useLiveNotifications from "src/hooks/useLiveNotifications";
+
 export interface DashboardState {
   lessonType: LessonType;
   isMobile: boolean;
@@ -22,6 +24,7 @@ export interface DashboardState {
 
 const Dashboard: React.FC = () => {
   const dispatch = useStoreDispatch();
+  const { length: notificationLength } = useLiveNotifications();
 
   const user = useStoreSelector((state) => state["user"]);
   const lessons = useStoreSelector((state) => state.lessons["lessons"]);
@@ -74,7 +77,7 @@ const Dashboard: React.FC = () => {
       height="full"
       margin={["auto", "0px"]}
     >
-      <DashboardHeaderMobile notificationLength={3} />
+      <DashboardHeaderMobile notificationLength={notificationLength} />
 
       <Text
         mr={2}

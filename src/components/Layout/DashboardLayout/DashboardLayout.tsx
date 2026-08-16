@@ -4,12 +4,13 @@ import { SideBar, NavBar, BottomNav } from "../../";
 import NotificationModal from "../../Modals/NotificationModal/NotificationModal";
 import { getToken } from "src/utils/constant";
 import { useEffect } from "react";
-import { sampleNotifications } from "src/pages/Notifications/Notifications";
+import useLiveNotifications from "src/hooks/useLiveNotifications";
 import MobileNoticeModal from "src/pages/Dashboard/components/MobileNotice";
 
 const DashboardLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const token = getToken();
+  const { notifications } = useLiveNotifications();
 
   useEffect(() => {
     if (!token) window.location.reload();
@@ -21,12 +22,12 @@ const DashboardLayout = () => {
       <Box width="full" h="100vh">
         <NavBar
           notificationCtrl={onOpen}
-          notificationLength={sampleNotifications.length}
+          notificationLength={notifications.length}
         />
         <NotificationModal
           isOpen={isOpen}
           onClose={onClose}
-          notifications={sampleNotifications}
+          notifications={notifications}
         />
         <MobileNoticeModal />
         <Box width="full" overflow={"scroll"} h="calc(100vh - 60px)">

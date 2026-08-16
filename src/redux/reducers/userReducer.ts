@@ -18,7 +18,22 @@ const userSlice = createSlice({
     updateUserData(state, action: PayloadAction<UserI>) {
       return { ...state, data: action.payload.data };
     },
+
+    addNotification(state, action: PayloadAction<any>) {
+      if (state.data) {
+        if (!state.data.notifications) {
+          state.data.notifications = [];
+        }
+        const notif = action.payload;
+        const exists = state.data.notifications.some(
+          (n: any) => n._id === notif._id
+        );
+        if (!exists) {
+          state.data.notifications = [notif, ...state.data.notifications];
+        }
+      }
+    },
   },
 });
-export const { updateToken, updateUserData } = userSlice.actions;
+export const { updateToken, updateUserData, addNotification } = userSlice.actions;
 export const { actions: userActions, reducer: userReducer } = userSlice;

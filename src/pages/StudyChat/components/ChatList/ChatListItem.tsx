@@ -43,8 +43,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
           <Flex justifyContent="center" flexDir="column">
             <Text
               fontSize={14}
-              fontWeight={500}
-              color="#2A2A2A"
+              fontWeight={data?.unread_messages && data.unread_messages > 0 ? 700 : 500}
+              color={data?.unread_messages && data.unread_messages > 0 ? "#000" : "#2A2A2A"}
               lineHeight="17.5px"
               marginBottom="5px"
             >
@@ -54,8 +54,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
             {data?.last_msg && (
               <Text
                 fontSize={12}
-                fontWeight={400}
-                color="#555555"
+                fontWeight={data?.unread_messages && data.unread_messages > 0 ? 600 : 400}
+                color={data?.unread_messages && data.unread_messages > 0 ? "#111" : "#555555"}
                 lineHeight="15px"
               >
                 {data.last_msg}

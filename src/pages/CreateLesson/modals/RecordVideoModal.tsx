@@ -206,7 +206,6 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
       handleStateUpdate({ loading: false, loadingMessage: "" });
       setFailedBlob(blob);
 
-      // const errorMessage = getUploadErrorMessage(error);
       const isConnectionIssue =
         !navigator.onLine ||
         error.code === "ERR_NETWORK" ||

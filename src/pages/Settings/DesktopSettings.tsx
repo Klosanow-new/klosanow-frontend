@@ -11,6 +11,7 @@ import {
 import SubscriptionModal from "../../components/Modals/SubscriptionModal/SubscriptionModal";
 import { useState } from "react";
 import SubscriptionPlans from "./components/SubscriptionPlans";
+import NotificationSettings from "../NotificationSettings/NotificationSettings";
 
 const DesktopSettings = () => {
   // const { isOpen, onOpen, onClose } = useDisclosure();
@@ -122,7 +123,9 @@ const DesktopSettings = () => {
           </TabList>
           <TabPanels>
             <TabPanel>1</TabPanel>
-            <TabPanel>2</TabPanel>
+            <TabPanel>
+              <NotificationSettings hideHeader={true} />
+            </TabPanel>
             <TabPanel>
               <SubscriptionPlans openModal={openModal} />
             </TabPanel>

@@ -26,6 +26,8 @@ const useMediaRecorder = () => {
       navigator as any
     ).mediaDevices.getDisplayMedia({
       video: {
+        width: { max: 1280 },
+        height: { max: 720 },
         frameRate: { ideal: 15, max: 25 },
       },
       preferCurrentTab: true,
@@ -47,8 +49,8 @@ const useMediaRecorder = () => {
     recorderRef.current = new RecordRTCPromisesHandler(stream, {
       type: "video",
       mimeType: "video/webm;codecs=vp8",
-      videoBitsPerSecond: 800000, // 800 kbps (great quality for slides, low size)
-      audioBitsPerSecond: 128000, // 128 kbps (clear audio)
+      videoBitsPerSecond: 400000, // 400 kbps (optimized for slides readability, lower size)
+      audioBitsPerSecond: 64000,  // 64 kbps (optimized for clear speech)
     });
 
     await recorderRef.current.startRecording();

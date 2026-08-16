@@ -2,6 +2,7 @@ import React from "react";
 import { io, Socket } from "socket.io-client";
 import * as webSocketUrls from "src/data/apiUrl";
 import { getToken } from "src/utils/constant";
+import { NewMessagePayload } from "src/types";
 
 const useChatWebSocket = () => {
   const url = "wss://api.klosanow.com";
@@ -69,6 +70,16 @@ const useChatWebSocket = () => {
     isConnected,
     eventType,
     disconnectWebSocket,
+
+    // Incoming messages addressed to this user. Attach this in exactly one
+    // place — this hook opens a socket per call, so a listener added in a
+    // component that renders alongside another consumer fires more than once.
+    onNewMessage: (cb: (data: NewMessagePayload) => void) => {
+      const offs = webSocketUrls.newMessageWebSocketUrls.map((event) =>
+        on(event, cb)
+      );
+      return () => offs.forEach((off) => off?.());
+    },
 
     // ---- Chat methods ----
     getAllChats: (cb: (chats: any) => void) => {
