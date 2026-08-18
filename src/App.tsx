@@ -129,7 +129,12 @@ function App() {
             payload?.studyChatId ||
             payload?._id ||
             undefined,
-          renotify: false,
+          // Must be true. The tag above is per-conversation, so a second message
+          // in the same chat replaces the first bubble — and a silent replace
+          // means the user is never alerted again after the first message.
+          // Matches sw.js. The cost is that if the backend also pushes this
+          // message you may get two alerts; that's far better than missing them.
+          renotify: true,
           data: { url: "/study-chat" },
         };
 
