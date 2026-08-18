@@ -12,7 +12,7 @@ interface UploadFileRequest {
 }
 type UploadFileAction = (
   file: File,
-  onProgress?: (percent: number) => void,
+  onProgress?: (percent: number, retryMessage?: string) => void,
 ) => Promise<UploadFileRequest>;
 
 // type UploadFileAction = (file: File) => Promise<UploadFileRequest>;
@@ -63,7 +63,7 @@ export const validateFile = (file: File) => {
 
 export const uploadFile: UploadFileAction = async (
   mediaFile: File,
-  onProgress?: (percent: number) => void, // optional callback
+  onProgress?: (percent: number, retryMessage?: string) => void, // optional callback
 ) => {
   const validator = validateFile(mediaFile);
   const token = getToken();
@@ -75,23 +75,55 @@ export const uploadFile: UploadFileAction = async (
   const formData = new FormData();
   formData.append("mediaFile", mediaFile);
 
-  const res = await Axios.post(`${mediaRoute}`, formData, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data",
-    },
-    onUploadProgress: (progressEvent) => {
-      if (progressEvent.total && onProgress) {
-        const percent = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total,
-        );
-        onProgress(percent);
-      }
-    },
-  });
+  const maxRetries = 5;
+  let attempt = 0;
 
-  if (!res || !res.data) return;
-  return res.data;
+  while (attempt < maxRetries) {
+    try {
+      const res = await Axios.post(`${mediaRoute}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            onProgress(percent, undefined);
+          }
+        },
+      });
+
+      if (!res || !res.data) throw new Error("Empty response from server");
+      return res.data;
+    } catch (error: any) {
+      attempt++;
+
+      // Check if it is a transient error: no response (network down/DNS fail) or 5xx server status
+      const isNetworkError =
+        !error.response ||
+        error.code === "ERR_NETWORK" ||
+        error.message === "Network Error" ||
+        error.code === "ECONNABORTED" ||
+        error.response.status >= 500;
+
+      if (isNetworkError && attempt < maxRetries) {
+        // Calculate delay with exponential backoff and jitter
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        console.warn(`Upload attempt ${attempt} failed. Retrying in ${Math.round(delay)}ms... Error:`, error.message);
+
+        if (onProgress) {
+          onProgress(0, `Network issue. Reconnecting... (Attempt ${attempt}/${maxRetries})`);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Upload failed after maximum retries");
 };
 
 export const deletedFile = async (fileUrl: string) => {

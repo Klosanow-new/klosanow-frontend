@@ -175,8 +175,8 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
         type: blob.type,
       });
 
-      const res = await uploadFile(file, (percent) => {
-        handleStateUpdate({ loadingMessage: `Uploading... ${percent}%` });
+      const res = await uploadFile(file, (percent, retryMessage) => {
+        handleStateUpdate({ loadingMessage: retryMessage || `Uploading... ${percent}%` });
       });
 
       if (!res || !res.data || res.status !== FileUploadResponseStatus.Success)

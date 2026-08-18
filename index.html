@@ -18,6 +18,16 @@
       name="description"
       content="an online educational platform for sub-Saharan Africa"
     />
+
+    <!-- PWA / web push. iOS only delivers push to a site installed via
+         "Add to Home Screen", which requires a manifest with display:standalone. -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#7B58F4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Klosanow" />
+
     <title>Klosanow</title>
   </head>
   <body>

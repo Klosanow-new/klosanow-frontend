@@ -23,6 +23,13 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 const registerServiceWorker = () =>
   navigator.serviceWorker.register("/sw.js", { scope: "/" });
 
+// App.tsx keys <Routes> on location.pathname, so the layout — and with it the
+// EnablePushBanner that mounts this hook — remounts on every navigation. Module
+// scope keeps the silent re-sync to one POST per page load instead of one per
+// route change. Reading local subscription state stays per-mount; only the
+// network call is gated.
+let syncedThisPageLoad = false;
+
 export default function usePushNotifications() {
   const [isSupported, setIsSupported] = React.useState(false);
   const [isSubscribed, setIsSubscribed] = React.useState(false);
@@ -30,6 +37,38 @@ export default function usePushNotifications() {
     React.useState<NotificationPermission>("default");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Re-post the subscription this browser already holds. Silent and idempotent —
+  // it never prompts, so it is safe on load. This is what repairs a server row
+  // lost to a new device, cleared site data, a different account on the same
+  // browser, or a subscription the browser rotated behind our back.
+  const syncSubscription = React.useCallback(async (force = false) => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    try {
+      const registration = await registerServiceWorker();
+      await navigator.serviceWorker.ready;
+
+      const subscription = await registration.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
+
+      if (!subscription) return;
+      if (!force && syncedThisPageLoad) return;
+
+      const { endpoint, keys } = subscription.toJSON() as {
+        endpoint: string;
+        keys: { p256dh: string; auth: string };
+      };
+
+      await savePushSubscription({ endpoint, keys });
+      syncedThisPageLoad = true;
+    } catch (err: any) {
+      // Never surface this — the user didn't ask for it and can still subscribe
+      // manually from notification settings.
+      console.error("Push subscription sync failed:", err);
+    }
+  }, []);
 
   // Check browser support and current subscription status on mount
   React.useEffect(() => {
@@ -42,16 +81,17 @@ export default function usePushNotifications() {
       setPermission(Notification.permission);
 
       try {
-        // Re-register on every load so the worker survives a refresh. Without
-        // this the worker is only registered when the user clicks subscribe.
-        const registration =
-          Notification.permission === "granted"
-            ? await registerServiceWorker()
-            : await navigator.serviceWorker.getRegistration();
-
-        if (registration) {
-          const subscription = await registration.pushManager.getSubscription();
-          setIsSubscribed(!!subscription);
+        if (Notification.permission === "granted") {
+          // Re-register on every load so the worker survives a refresh, and
+          // re-confirm the endpoint with the server while we're here.
+          await syncSubscription();
+        } else {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            const subscription =
+              await registration.pushManager.getSubscription();
+            setIsSubscribed(!!subscription);
+          }
         }
       } catch (err: any) {
         console.error("Error checking active subscription:", err);
@@ -59,7 +99,25 @@ export default function usePushNotifications() {
     };
 
     checkSupport();
-  }, []);
+  }, [syncSubscription]);
+
+  // The worker posts this after recovering from a rotated subscription — it has
+  // no token of its own, so the page is what actually saves the new endpoint.
+  React.useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "PUSH_SUBSCRIPTION_CHANGED") {
+        // Force — the endpoint genuinely changed, so the page-load guard must
+        // not suppress this one.
+        syncSubscription(true);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+  }, [syncSubscription]);
 
   const subscribe = async () => {
     if (!isSupported) {
@@ -104,6 +162,8 @@ export default function usePushNotifications() {
 
       await savePushSubscription({ endpoint, keys });
 
+      // The server is now current, so the silent re-sync has nothing to do.
+      syncedThisPageLoad = true;
       setIsSubscribed(true);
     } catch (err: any) {
       console.error("Push notification subscription error:", err);
@@ -145,6 +205,8 @@ export default function usePushNotifications() {
       }
 
       await subscription.unsubscribe();
+      // Let a later re-subscribe sync again rather than being skipped.
+      syncedThisPageLoad = false;
       setIsSubscribed(false);
     } catch (err: any) {
       console.error("Unsubscribe error:", err);
@@ -162,5 +224,6 @@ export default function usePushNotifications() {
     error,
     subscribe,
     unsubscribe,
+    syncSubscription,
   };
 }

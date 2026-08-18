@@ -59,7 +59,8 @@ function App() {
 
   const playChime = useCallback(() => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) return;
       const audioCtx = new AudioContextClass();
       const oscillator = audioCtx.createOscillator();
@@ -74,7 +75,10 @@ function App() {
       oscillator.start();
 
       oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioCtx.currentTime + 0.4,
+      );
       oscillator.stop(audioCtx.currentTime + 0.4);
     } catch (err) {
       console.error("Audio chime failed:", err);
@@ -101,10 +105,44 @@ function App() {
     }
   }, [user.isAuth, user.token, fetchUser]);
 
-  // Incoming messages while the app is open. Web push covers the closed/
-  // backgrounded case; this is the in-app half. Attached here and nowhere else —
-  // useChatWebSocket opens a socket per call site, so a second listener would
-  // double every toast.
+  const showBackgroundNotification = useCallback(
+    async (payload: any, name: string) => {
+      if (!("serviceWorker" in navigator)) return false;
+      if (
+        typeof Notification === "undefined" ||
+        Notification.permission !== "granted"
+      ) {
+        return false;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) return false;
+
+        const options: any = {
+          body:
+            payload?.text || payload?.message || "You received a new message.",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag:
+            payload?.chatId ||
+            payload?.studyChatId ||
+            payload?._id ||
+            undefined,
+          renotify: false,
+          data: { url: "/study-chat" },
+        };
+
+        await registration.showNotification(name || "New message", options);
+        return true;
+      } catch (err) {
+        console.error("Background notification failed:", err);
+        return false;
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!isConnected) return;
 
@@ -114,30 +152,42 @@ function App() {
         .filter(Boolean)
         .join(" ");
 
-      // Play audio chime when message arrives
-      playChime();
+      const alertUser = async () => {
+        // Hidden tab → OS notification. If that isn't possible (permission not
+        // granted, no worker yet) fall through to the toast and chime.
+        if (
+          document.hidden &&
+          (await showBackgroundNotification(payload, name))
+        ) {
+          return;
+        }
 
-      toast({
-        title: name || "New message",
-        description: (
-          <Box
-            as="div"
-            cursor="pointer"
-            onClick={() => {
-              navigate("/study-chat");
-              toast.closeAll();
-            }}
-            _hover={{ textDecoration: "underline" }}
-            py="1"
-          >
-            {payload?.text || payload?.message || "Click to open chat"}
-          </Box>
-        ),
-        status: "info",
-        position: "top-right",
-        duration: 5000,
-        isClosable: true,
-      });
+        playChime();
+
+        toast({
+          title: name || "New message",
+          description: (
+            <Box
+              as="div"
+              cursor="pointer"
+              onClick={() => {
+                navigate("/study-chat");
+                toast.closeAll();
+              }}
+              _hover={{ textDecoration: "underline" }}
+              py="1"
+            >
+              {payload?.text || payload?.message || "Click to open chat"}
+            </Box>
+          ),
+          status: "info",
+          position: "top-right",
+          duration: 5000,
+          isClosable: true,
+        });
+      };
+
+      alertUser();
 
       // Synchronize in-app notifications section immediately client-side
       const notifObj = {
@@ -156,7 +206,15 @@ function App() {
       // Refetch user profile to fetch any other new database notifications
       fetchUser();
     });
-  }, [isConnected, dispatch, fetchUser, toast, playChime, navigate]);
+  }, [
+    isConnected,
+    dispatch,
+    fetchUser,
+    toast,
+    playChime,
+    navigate,
+    showBackgroundNotification,
+  ]);
 
   // The service worker posts this when an OS notification is clicked.
   useEffect(() => {

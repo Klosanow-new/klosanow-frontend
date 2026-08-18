@@ -35,3 +35,17 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     </ChakraProvider>
   </React.StrictMode>
 );
+
+// Register the push worker on every load so it exists for anyone who already
+// granted permission — without it, push only worked for users who happened to
+// visit /settings/notifications. This never prompts: requesting permission and
+// subscribing stay behind a user gesture in usePushNotifications.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .catch((err) =>
+        console.error("Service worker registration failed:", err)
+      );
+  });
+}

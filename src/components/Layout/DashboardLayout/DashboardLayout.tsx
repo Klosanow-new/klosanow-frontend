@@ -1,6 +1,6 @@
 import { Box, useDisclosure } from "@chakra-ui/react";
 import { Outlet } from "react-router-dom";
-import { SideBar, NavBar, BottomNav } from "../../";
+import { SideBar, NavBar, BottomNav, EnablePushBanner } from "../../";
 import NotificationModal from "../../Modals/NotificationModal/NotificationModal";
 import { getToken } from "src/utils/constant";
 import { useEffect } from "react";
@@ -31,6 +31,8 @@ const DashboardLayout = () => {
         />
         <MobileNoticeModal />
         <Box width="full" overflow={"scroll"} h="calc(100vh - 60px)">
+          <EnablePushBanner />
+
           <Outlet />
 
           <BottomNav />
