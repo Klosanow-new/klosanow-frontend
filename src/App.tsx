@@ -119,22 +119,23 @@ function App() {
         const registration = await navigator.serviceWorker.getRegistration();
         if (!registration) return false;
 
+        // Same derivation as tagFor() in public/sw.js, so if the backend also
+        // pushes this message the two bubbles collapse into one.
+        const tag =
+          payload?.chatId || payload?.studyChatId || payload?._id || undefined;
+
         const options: any = {
           body:
             payload?.text || payload?.message || "You received a new message.",
           icon: "/icon-192.png",
           badge: "/icon-192.png",
-          tag:
-            payload?.chatId ||
-            payload?.studyChatId ||
-            payload?._id ||
-            undefined,
-          // Must be true. The tag above is per-conversation, so a second message
-          // in the same chat replaces the first bubble — and a silent replace
-          // means the user is never alerted again after the first message.
-          // Matches sw.js. The cost is that if the backend also pushes this
-          // message you may get two alerts; that's far better than missing them.
-          renotify: true,
+          tag,
+          // Must track whether a tag exists, exactly as sw.js does. With a tag,
+          // true is required or a second message in the same chat replaces the
+          // first bubble silently and never alerts. Without a tag it must be
+          // false: showNotification rejects with a TypeError when renotify is
+          // true and the tag is empty, which kills the notification entirely.
+          renotify: !!tag,
           data: { url: "/study-chat" },
         };
 
@@ -152,6 +153,12 @@ function App() {
     if (!isConnected) return;
 
     return onNewMessage((payload) => {
+      // Temporary, dev-only: confirms whether the server sends chatId/_id, which
+      // decides whether notifications group per conversation or stack per message.
+      if (import.meta.env.DEV) {
+        console.log("[new-message payload]", payload);
+      }
+
       const sender = payload?.sender;
       const name = [sender?.firstName, sender?.lastName]
         .filter(Boolean)
