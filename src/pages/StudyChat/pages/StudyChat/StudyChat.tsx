@@ -21,6 +21,7 @@ import { CHAT_CONTACT_KEY } from "src/data/constants";
 import { useSearchParams } from "react-router-dom";
 import { RemoveMemberModal } from "../../modals";
 import LeaveChatGroupModal from "../../modals/LeaveChatGroupModal";
+import { isChatUnread, useUnreadChats } from "src/utils/unreadChats";
 
 const StudyChat: React.FC = () => {
   const dispatch = useStoreDispatch();
@@ -30,6 +31,8 @@ const StudyChat: React.FC = () => {
   const slug = searchParams.get("slug");
 
   const { eventType } = useChatWebSocket();
+
+  const unread = useUnreadChats();
 
   const [state, setState] = React.useState<DefaultValuesProps>(DefaultValues);
 
@@ -52,8 +55,12 @@ const StudyChat: React.FC = () => {
   }, [chats, storageChat, user]);
 
   const allChats = React.useMemo(
-    () => [...studyChatList, ...chatList],
-    [chatList, studyChatList]
+    () =>
+      [...studyChatList, ...chatList].map((item) => ({
+        ...item,
+        has_unread: isChatUnread(item, unread, user.data?._id),
+      })),
+    [chatList, studyChatList, unread, user.data?._id]
   );
 
   const matchedChat = React.useMemo(() => {

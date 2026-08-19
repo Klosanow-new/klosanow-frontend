@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { StudyChatContext } from "../../context/StudyChat";
 import { formatDistanceToNow } from "date-fns";
 import { getContactDisplayName } from "../../utils";
+import { markChatRead } from "src/utils/unreadChats";
 
 interface ChatListItemProps {
   data: ChatListData | null;
@@ -21,13 +22,20 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
 
   const isActive = param === data?.slug;
 
-  const hasUnread = !!data?.unread_messages && data.unread_messages > 0;
+  // `unread_messages` is a server count the chat endpoints don't currently
+  // return; `has_unread` is the device-tracked flag. An open chat is being read,
+  // so it never carries a dot.
+  const hasUnread =
+    !isActive &&
+    (!!data?.has_unread ||
+      (!!data?.unread_messages && data.unread_messages > 0));
 
   const rowBg = isActive ? "#F3ECF8" : "#fafafa";
 
   const updateUrl = () => {
     setSearchParams({ slug: data?.slug || "" });
     updateStudyChatValues({ activeChat: data, loadingMessage: true });
+    markChatRead(data);
   };
 
   return (

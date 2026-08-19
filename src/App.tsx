@@ -47,6 +47,7 @@ import { CHAT_CONTACT_KEY } from "./data/constants";
 import { useToast, Box } from "@chakra-ui/react";
 import { getSingleUser } from "./api-endpoints/user/user.api";
 import { updateUserData, addNotification } from "./redux/reducers/userReducer";
+import { markChatUnread } from "./utils/unreadChats";
 
 function App() {
   const location = useLocation();
@@ -211,6 +212,12 @@ function App() {
         isRead: false,
       };
       dispatch(addNotification(notifObj));
+
+      // Flag the conversation so the chat list shows an unread dot. The payload
+      // may only identify it by sender, so pass the most specific id present.
+      markChatUnread(
+        payload.studyChatId || payload.chatId || payload.sender?._id
+      );
 
       // Refresh the chat lists so unread state and previews stay current.
       dispatch(fetchChats());

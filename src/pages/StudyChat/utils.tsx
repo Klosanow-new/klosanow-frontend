@@ -235,6 +235,7 @@ export const getChatListData = (
         item?.lastChatMessage[0]?.createdAt || formatISO(new Date()),
       type: ChatType.Single,
       last_msg: item?.lastChatMessage[0]?.text.substring(0, 20),
+      last_msg_sender_id: item?.lastChatMessage[0]?.sender?._id,
     };
   });
 };

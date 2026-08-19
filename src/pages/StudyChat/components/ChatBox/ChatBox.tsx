@@ -11,6 +11,7 @@ import useChatWebSocket from "src/hooks/useChatWebSocket";
 import { ChatListData, ChatType, MessageType } from "src/types";
 import { StudyChatContext } from "../../context/StudyChat";
 import { getChat, getStudyChat } from "src/api-endpoints/studyChat";
+import { markChatRead } from "src/utils/unreadChats";
 
 interface ChatBoxProps {
   chat: ChatListData | null;
@@ -55,6 +56,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ chat }) => {
     if (eventType === "ping" || eventType === "message" || isSent)
       handleFetchChat();
   }, [handleFetchChat, eventType, isSent]);
+
+  // An open chat is read, including anything that arrives while it stays open.
+  React.useEffect(() => {
+    markChatRead(chat);
+  }, [chat?.id, messages.length]);
 
   return (
     <>

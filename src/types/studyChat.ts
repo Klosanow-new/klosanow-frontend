@@ -29,7 +29,9 @@ export interface ChatListData {
   admin: Contact;
   createdAt: string;
   last_msg?: string;
+  last_msg_sender_id?: string;
   unread_messages?: number;
+  has_unread?: boolean;
   description?: string;
 }
 
