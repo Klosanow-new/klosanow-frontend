@@ -19,6 +19,12 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
 
   const icon = data?.img || "https://picsum.photos/40/40";
 
+  const isActive = param === data?.slug;
+
+  const hasUnread = !!data?.unread_messages && data.unread_messages > 0;
+
+  const rowBg = isActive ? "#F3ECF8" : "#fafafa";
+
   const updateUrl = () => {
     setSearchParams({ slug: data?.slug || "" });
     updateStudyChatValues({ activeChat: data, loadingMessage: true });
@@ -33,18 +39,33 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
         borderBottomWidth="0.2px"
         borderBottomColor="neutral.70"
         padding="10px 10px"
-        bg={param === data?.slug ? "#F3ECF8" : "transparent"}
+        bg={isActive ? "#F3ECF8" : "transparent"}
       >
         <Flex justifyContent="space-between" gap="8px">
-          <Circle size="50px" bg="#b1b1b1" overflow="hidden">
-            <Image src={icon} />
-          </Circle>
+          <Box position="relative" flexShrink={0}>
+            <Circle size="50px" bg="#b1b1b1" overflow="hidden">
+              <Image src={icon} />
+            </Circle>
+
+            {hasUnread && (
+              <Circle
+                size="14px"
+                bg="#9174F6"
+                position="absolute"
+                top="1px"
+                right="1px"
+                borderWidth="2px"
+                borderStyle="solid"
+                borderColor={rowBg}
+              />
+            )}
+          </Box>
 
           <Flex justifyContent="center" flexDir="column">
             <Text
               fontSize={14}
-              fontWeight={data?.unread_messages && data.unread_messages > 0 ? 700 : 500}
-              color={data?.unread_messages && data.unread_messages > 0 ? "#000" : "#2A2A2A"}
+              fontWeight={hasUnread ? 700 : 500}
+              color={hasUnread ? "#000" : "#2A2A2A"}
               lineHeight="17.5px"
               marginBottom="5px"
             >
@@ -54,8 +75,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
             {data?.last_msg && (
               <Text
                 fontSize={12}
-                fontWeight={data?.unread_messages && data.unread_messages > 0 ? 600 : 400}
-                color={data?.unread_messages && data.unread_messages > 0 ? "#111" : "#555555"}
+                fontWeight={hasUnread ? 600 : 400}
+                color={hasUnread ? "#111" : "#555555"}
                 lineHeight="15px"
               >
                 {data.last_msg}
@@ -75,9 +96,9 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ data }) => {
             {formatDistanceToNow(data?.last_msg_time || "")} ago
           </Text>
 
-          {data?.unread_messages && data.unread_messages > 0 ? (
+          {hasUnread ? (
             <Circle size="20px" p={2} bg="#BDABF9">
-              <Text fontSize={12}>{data.unread_messages}</Text>
+              <Text fontSize={12}>{data?.unread_messages}</Text>
             </Circle>
           ) : undefined}
         </Flex>

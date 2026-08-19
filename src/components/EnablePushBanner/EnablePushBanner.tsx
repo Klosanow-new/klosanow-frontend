@@ -9,7 +9,6 @@ export default function EnablePushBanner() {
   const { isSupported, permission, loading, error, subscribe } =
     usePushNotifications();
 
-  // getStorageItem JSON.parses, so the "true" written below comes back as a boolean.
   const [dismissed, setDismissed] = useState(
     () => !!getStorageItem<boolean>(PUSH_PROMPT_DISMISSED_KEY),
   );
