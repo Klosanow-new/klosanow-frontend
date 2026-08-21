@@ -24,15 +24,18 @@ import {
   VerifyOtp,
   VerifySplash,
   ResetSplash,
+  WatchLesson,
 } from "./pages";
 import ProtectedRoute from "./utils/ProtectedRoute";
+import SlideGallery from "./pages/CreateLesson/slides/gallery/SlideGallery";
 import {
   createLessonPagePath,
   dashboardPageSlug,
   studyChatPagePath,
+  slideGalleryPageSlug,
+  watchLessonPagePath,
 } from "./data/pageUrl";
 import useChatWebSocket from "./hooks/useChatWebSocket";
-// import { useQuery } from "@tanstack/react-query";
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStoreDispatch, useStoreSelector } from "./redux/hooks";
@@ -99,7 +102,6 @@ function App() {
     }
   }, [user.data?._id, user.token, dispatch]);
 
-  // Refetch user profile on mount or when auth credentials change
   useEffect(() => {
     if (user.isAuth && user.token) {
       fetchUser();
@@ -120,8 +122,6 @@ function App() {
         const registration = await navigator.serviceWorker.getRegistration();
         if (!registration) return false;
 
-        // Same derivation as tagFor() in public/sw.js, so if the backend also
-        // pushes this message the two bubbles collapse into one.
         const tag =
           payload?.chatId || payload?.studyChatId || payload?._id || undefined;
 
@@ -131,11 +131,6 @@ function App() {
           icon: "/icon-192.png",
           badge: "/icon-192.png",
           tag,
-          // Must track whether a tag exists, exactly as sw.js does. With a tag,
-          // true is required or a second message in the same chat replaces the
-          // first bubble silently and never alerts. Without a tag it must be
-          // false: showNotification rejects with a TypeError when renotify is
-          // true and the tag is empty, which kills the notification entirely.
           renotify: !!tag,
           data: { url: "/study-chat" },
         };
@@ -154,20 +149,12 @@ function App() {
     if (!isConnected) return;
 
     return onNewMessage((payload) => {
-      // Temporary, dev-only: confirms whether the server sends chatId/_id, which
-      // decides whether notifications group per conversation or stack per message.
-      if (import.meta.env.DEV) {
-        console.log("[new-message payload]", payload);
-      }
-
       const sender = payload?.sender;
       const name = [sender?.firstName, sender?.lastName]
         .filter(Boolean)
         .join(" ");
 
       const alertUser = async () => {
-        // Hidden tab → OS notification. If that isn't possible (permission not
-        // granted, no worker yet) fall through to the toast and chime.
         if (
           document.hidden &&
           (await showBackgroundNotification(payload, name))
@@ -202,7 +189,6 @@ function App() {
 
       alertUser();
 
-      // Synchronize in-app notifications section immediately client-side
       const notifObj = {
         _id: payload._id || new Date().getTime().toString(),
         sender: payload.sender,
@@ -213,16 +199,12 @@ function App() {
       };
       dispatch(addNotification(notifObj));
 
-      // Flag the conversation so the chat list shows an unread dot. The payload
-      // may only identify it by sender, so pass the most specific id present.
       markChatUnread(
-        payload.studyChatId || payload.chatId || payload.sender?._id
+        payload.studyChatId || payload.chatId || payload.sender?._id,
       );
 
-      // Refresh the chat lists so unread state and previews stay current.
       dispatch(fetchChats());
       dispatch(fetchStudyChats());
-      // Refetch user profile to fetch any other new database notifications
       fetchUser();
     });
   }, [
@@ -235,7 +217,6 @@ function App() {
     showBackgroundNotification,
   ]);
 
-  // The service worker posts this when an OS notification is clicked.
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
@@ -250,7 +231,6 @@ function App() {
       navigator.serviceWorker.removeEventListener("message", handleMessage);
   }, [navigate]);
 
-  // Remove chat from storage after 30 seconds
   useEffect(() => {
     if (!storageContact) return;
     const timeout = setTimeout(() => {
@@ -300,6 +280,9 @@ function App() {
           <Route path="/reset-verify" element={<ResetSplash />} />
 
           <Route path="/auth/reset-otp/:token" element={<ResetPassword />} />
+          {import.meta.env.DEV ? (
+            <Route path={slideGalleryPageSlug} element={<SlideGallery />} />
+          ) : null}
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
               {/* dashboard routes */}
@@ -311,6 +294,13 @@ function App() {
               />
 
               <Route path={`${studyChatPagePath}/*`} element={<StudyChat />} />
+
+              {/* Shared lesson links land here */}
+              <Route
+                path={`${watchLessonPagePath}/:lessonId`}
+                element={<WatchLesson />}
+              />
+
 
               <Route path="/invite" element={<InviteLink />} />
               <Route path="/notifications" element={<Notifications />} />
@@ -330,7 +320,6 @@ function App() {
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
-          {/* this should always be the last route */}
           <Route path="*" element={<Error />} />
         </Routes>
       </AnimatePresence>

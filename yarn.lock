@@ -1246,15 +1246,50 @@
   resolved "https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.2.tgz"
   integrity sha512-J4yDIIthosAsRZ5CPYP/jQvUAQtlZTTD/4suA08/FEnlxqW3sKS9iAhgsa9VYLZ6vDHn/ixJgIqRQPotoBjxIw==
 
+"@fontsource-variable/bricolage-grotesque@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource-variable/bricolage-grotesque/-/bricolage-grotesque-5.3.0.tgz"
+  integrity sha512-TLi9Q4hJjS2UvoTMRSS2nHu6c4R56lAw60NR9QYtVRCHn0XtsFpiEhNffZ8Glsoxu6wEEwLKBP8lb94J52PNBA==
+
+"@fontsource-variable/fraunces@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource-variable/fraunces/-/fraunces-5.3.0.tgz"
+  integrity sha512-9BYGySn4AHEJdgp9Z28tQ3X+laJMEOITXkQarZXeloWQZDq5oOvXJ3kDA8c7MGIfpogIaZfjrQBqmda8POOCKA==
+
+"@fontsource/dm-sans@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource/dm-sans/-/dm-sans-5.3.0.tgz"
+  integrity sha512-lYJtMXXO28q1z+yz+z8XKd0s4hXaa9QdkETzkyD760sidCv5heI86weYA0sx0Nc4pAMAQTUuyf4gO44cYKKS9g==
+
+"@fontsource/dm-serif-display@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource/dm-serif-display/-/dm-serif-display-5.3.0.tgz"
+  integrity sha512-ecRclUcYeto9fB7ghkB36H4MtUoaUYFjjornWYYeLCMHzaWEDPk2kIWgZOq0mKBNRxclRSieKcFeLonlMYDTKg==
+
 "@fontsource/encode-sans@^4.5.10":
   version "4.5.10"
   resolved "https://registry.npmjs.org/@fontsource/encode-sans/-/encode-sans-4.5.10.tgz"
   integrity sha512-FzEcY9WnjHG5hmaoRxSDoJ2PDt1yWQj/Fx+VjxSQZz+ZbgtIG/aIVG8QDMxMi82kGnVIcoez5mqbZ6wmfmXjAg==
 
+"@fontsource/inter@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource/inter/-/inter-5.3.0.tgz"
+  integrity sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==
+
+"@fontsource/outfit@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource/outfit/-/outfit-5.3.0.tgz"
+  integrity sha512-0AVHzTTVJSxWDOxPKSfMeHhZeBFDU3cmgrcOb76ZEyhGo0+xgyG3GsLF3h9+X8w0IX7G4jzjJgFQEBiWdX6VgA==
+
 "@fontsource/playfair-display@^4.5.13":
   version "4.5.13"
   resolved "https://registry.npmjs.org/@fontsource/playfair-display/-/playfair-display-4.5.13.tgz"
   integrity sha512-41yD3XW8jATcZO8E2U6Xe9MIaogPdjrGkC4ixNzAIdrR3BvLxXpeHU2xw3rwIq8aHhFUYwLnE6Lq+BWSTZZH9w==
+
+"@fontsource/space-grotesk@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.npmjs.org/@fontsource/space-grotesk/-/space-grotesk-5.3.0.tgz"
+  integrity sha512-ksnGizDPXIDuvqcTYTSrmZ+evx9sDlS8rp7+42BQ7wU+spt3twEoXfbJz672C+5CLg6VeUQwRy5RXshWb67LcQ==
 
 "@gilbarbara/deep-equal@^0.1.1":
   version "0.1.2"
@@ -2067,13 +2102,6 @@ browserslist@^4.24.0, browserslist@^4.25.0, "browserslist@>= 4.21.0":
     electron-to-chromium "^1.5.173"
     node-releases "^2.0.19"
     update-browserslist-db "^1.1.3"
-
-bufferutil@^4.0.1:
-  version "4.0.9"
-  resolved "https://registry.npmjs.org/bufferutil/-/bufferutil-4.0.9.tgz"
-  integrity sha512-WDtdLmJvAuNNPzByAYpRo2rF1Mmradw6gvWsQKf63476DDXmomT9zUiGypLcG4ibIM67vhAj8jJRdbmEws2Aqw==
-  dependencies:
-    node-gyp-build "^4.3.0"
 
 call-bind@^1.0.2, call-bind@^1.0.5, call-bind@^1.0.6, call-bind@^1.0.7:
   version "1.0.7"
@@ -4303,11 +4331,6 @@ node-fetch@^2.6.1:
   dependencies:
     whatwg-url "^5.0.0"
 
-node-gyp-build@^4.3.0:
-  version "4.8.4"
-  resolved "https://registry.npmjs.org/node-gyp-build/-/node-gyp-build-4.8.4.tgz"
-  integrity sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==
-
 node-releases@^2.0.19:
   version "2.0.19"
   resolved "https://registry.npmjs.org/node-releases/-/node-releases-2.0.19.tgz"
@@ -5690,13 +5713,6 @@ use-sync-external-store@^1.0.0, use-sync-external-store@^1.2.0:
   version "1.2.2"
   resolved "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.2.2.tgz"
   integrity sha512-PElTlVMwpblvbNqQ82d2n6RjStvdSoNe9FG28kNfz3WiXilJm4DdNkEzRhCZuIDwY8U08WVihhGR5iRqAwfDiw==
-
-utf-8-validate@^5.0.2, utf-8-validate@>=5.0.2:
-  version "5.0.10"
-  resolved "https://registry.npmjs.org/utf-8-validate/-/utf-8-validate-5.0.10.tgz"
-  integrity sha512-Z6czzLq4u8fPOyx7TU6X3dvUZVvoJmxSQ+IcrlmagKhilxlhZgxPK6C5Jqbkw1IDUmFTM+cz9QDnnLTwDz/2gQ==
-  dependencies:
-    node-gyp-build "^4.3.0"
 
 util@^0.10.3:
   version "0.10.4"

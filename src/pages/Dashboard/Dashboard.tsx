@@ -4,7 +4,6 @@ import { Search } from "../../components/Search/Search";
 import { EmptyState, LessonCard } from "../../components";
 import DashboardHeaderMobile from "./components/DashboardHeaderMobile";
 import LessonTabHeader from "./components/LessonTabHeader";
-import { uniqueId } from "lodash";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLessons } from "../../api-endpoints/lessons/actions";
 import { useStoreDispatch, useStoreSelector } from "../../redux/hooks";
@@ -112,7 +111,7 @@ const Dashboard: React.FC = () => {
               {latestLesson.map((lesson) => (
                 <LessonCard
                   lesson={lesson}
-                  key={uniqueId(`lesson_${lesson._id}`)}
+                  key={lesson._id}
                   hasDescription={false}
                   hasWatch={false}
                   handleWatch={(activeLesson) =>
@@ -151,7 +150,7 @@ const Dashboard: React.FC = () => {
                 {lessonData.map((lesson) => (
                   <LessonCard
                     lesson={lesson}
-                    key={uniqueId(`lesson_${lesson._id}`)}
+                    key={lesson._id}
                     hasWatch={false}
                     descriptionLength={70}
                     width="sm"

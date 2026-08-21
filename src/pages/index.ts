@@ -9,6 +9,7 @@ export { default as ResetPassword } from "./Authentication/ResetPassword";
 export { default as Dashboard } from "./Dashboard";
 export { default as Error } from "./Error/Error";
 export { default as CreateLesson } from "./CreateLesson";
+export { default as WatchLesson } from "./WatchLesson/WatchLesson";
 export { default as Settings } from "./Settings/Settings";
 export { default as StudyChat } from "./StudyChat";
 export { default as Onboarding } from "./Onboarding/Onboarding";

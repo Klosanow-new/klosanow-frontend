@@ -41,8 +41,12 @@ const WatchLessonModal: React.FC<WatchLessonModalProps> = ({
                 width="100%"
                 height="100%"
                 src={lesson.videoUrl}
+                poster={lesson.thumbnailUrl}
+                preload="metadata"
                 style={{ opacity: "0.9" }}
                 controls
+                // Without this, iOS hijacks playback into fullscreen.
+                playsInline
               ></video>
             )}
           </Box>

@@ -6,10 +6,15 @@ import {
   Text,
   Box,
   useToast,
+  Badge,
 } from "@chakra-ui/react";
-import { uniqueId } from "lodash";
 import { AiFillDelete } from "react-icons/ai";
-import { CreateLessonFormStepsType } from "src/types";
+import {
+  CreateLessonFormStepsType,
+  Slide,
+  SlideItem,
+  isStructuredSlide,
+} from "src/types";
 import { CreateLessonFormContext } from "../../context/CreateLessonFormContext";
 import { colors } from "src/data/colors";
 import { getLessonContentActions } from "../../data";
@@ -18,12 +23,19 @@ import { draftsPagePath } from "src/data/pageUrl";
 import { useNavigate } from "react-router-dom";
 import OverlayLoader from "src/components/OverlayLoader";
 import { clearFileUrl } from "src/utils/constant";
+import StylePicker from "../../slides/StylePicker";
+import SlotEditor from "../../slides/SlotEditor";
+import DocumentUpload from "../../slides/DocumentUpload";
+import SlideRenderer from "../../slides/SlideRenderer";
+import { encodeContent } from "../../slides/slideCodec";
+import { LAYOUT_LABELS } from "../../slides/limits";
 
 interface LessonDescriptionState {
   index: number;
   value: string;
+  slideDraft: Slide | null;
   isEditing: boolean;
-  content: Array<string>;
+  content: Array<SlideItem>;
   showTooltip: boolean;
   loading: boolean;
 }
@@ -39,12 +51,14 @@ const SlideLessonContent: React.FC = () => {
     template,
     form_info,
     content,
+    slideStyle,
     updateCreateLessonFormValues,
   } = React.useContext(CreateLessonFormContext);
 
   const intialState: LessonDescriptionState = {
     index: content.length || 0,
     value: "",
+    slideDraft: null,
     isEditing: false,
     content: content || [],
     showTooltip: false,
@@ -62,41 +76,69 @@ const SlideLessonContent: React.FC = () => {
     });
 
   const handleAddSlide = () => {
-    let updateContent = [...state.content];
     if (!state.value) return;
 
-    if (!state.isEditing && state.value) {
-      updateContent = [...updateContent, state.value];
-    }
-
     handleStateUpdate({
-      index: state.index + 1,
-      content: updateContent,
+      index: state.content.length + 1,
+      content: [...state.content, state.value],
       value: "",
       isEditing: false,
     });
   };
 
   const handleUpdateSlide = () => {
-    if (state.isEditing && state.value) {
-      const updateContent = state.content.map((item, index) => {
-        return state.index === index ? state.value : item;
-      });
-
-      handleStateUpdate({
-        index: state.content.length,
-        content: updateContent,
-        value: "",
-        isEditing: false,
-      });
-    }
-  };
-
-  const handleRemove = (index: number) => {
-    const updateContent = [...state.content.filter((_, ix) => ix !== index)];
+    const replacement: SlideItem | null = state.slideDraft ?? state.value ?? null;
+    if (!replacement) return;
 
     handleStateUpdate({
-      content: updateContent,
+      index: state.content.length,
+      content: state.content.map((item, index) =>
+        state.index === index ? replacement : item
+      ),
+      value: "",
+      slideDraft: null,
+      isEditing: false,
+    });
+  };
+
+  const handleCancelEdit = () =>
+    handleStateUpdate({
+      value: "",
+      slideDraft: null,
+      isEditing: false,
+      index: state.content.length,
+    });
+
+  const handleRemove = (index: number) => {
+    handleStateUpdate({
+      content: state.content.filter((_, ix) => ix !== index),
+      ...(state.index === index
+        ? { value: "", slideDraft: null, isEditing: false }
+        : {}),
+    });
+  };
+
+  const handleSelect = (item: SlideItem, index: number) =>
+    handleStateUpdate({
+      index,
+      isEditing: true,
+      slideDraft: isStructuredSlide(item) ? item : null,
+      value: isStructuredSlide(item) ? "" : item,
+    });
+
+  const handleGenerated = (generated: Slide[]) => {
+    const offset = state.content.length;
+    const withIds = generated.map((slide, i) => ({
+      ...slide,
+      id: `g${offset + i + 1}`,
+    }));
+
+    handleStateUpdate({
+      content: [...state.content, ...withIds],
+      index: offset + withIds.length,
+      value: "",
+      slideDraft: null,
+      isEditing: false,
     });
   };
 
@@ -106,7 +148,7 @@ const SlideLessonContent: React.FC = () => {
       const formData = {
         ...form_info,
         about: form_info.description,
-        content: state.content,
+        content: encodeContent(slideStyle, state.content),
         template,
       };
 
@@ -144,17 +186,26 @@ const SlideLessonContent: React.FC = () => {
   );
 
   const isTooltipActive = state.showTooltip && state.content.length <= 1;
+  const editingSlide = state.slideDraft;
 
   return (
     <>
       <OverlayLoader loading={state.loading} description="Processing draft" />
-      <Text fontSize="32px" fontWeight="500" mb="24px">
+      <Text fontSize="32px" fontWeight="500" mb="16px">
         Create your lessons
       </Text>
 
+      <Box mb="20px">
+        <DocumentUpload
+          onGenerated={handleGenerated}
+          subject={form_info.title}
+        />
+      </Box>
+
       <Text fontSize="20px" mb="8px">
-        Slide {state.index < 10 ? "0" : ""}
-        {state.index + 1}
+        {editingSlide
+          ? `Editing slide ${state.index + 1}`
+          : `Slide ${state.index < 10 ? "0" : ""}${state.index + 1}`}
       </Text>
 
       <Flex
@@ -164,63 +215,143 @@ const SlideLessonContent: React.FC = () => {
           md: "row",
         }}
       >
-        <Editor
-          value={state.value}
-          placeholder="Your lesson content goes in here..."
-          onChange={(value) => handleStateUpdate({ value })}
-        />
+        {editingSlide ? (
+          <Flex flexDir="column" gap="12px" flex="1" minW="0">
+            <SlotEditor
+              slide={editingSlide}
+              onChange={(next) => handleStateUpdate({ slideDraft: next })}
+            />
+            <Box>
+              <Text fontSize="13px" fontWeight="600" color="black.30" mb="6px">
+                Preview
+              </Text>
+              <Box w="100%" h="0" pb="56.25%" position="relative">
+                <Box position="absolute" inset="0">
+                  <SlideRenderer item={editingSlide} style={slideStyle} />
+                </Box>
+              </Box>
+            </Box>
+          </Flex>
+        ) : (
+          <Editor
+            value={state.value}
+            placeholder="Your lesson content goes in here..."
+            onChange={(value) => handleStateUpdate({ value })}
+          />
+        )}
 
-        <Flex flexDir="column" gap="24px" w="100%" maxW="200px">
+        <Flex flexDir="column" gap="16px" w="100%" maxW="220px">
           <Button
             onClick={() =>
               state.isEditing ? handleUpdateSlide() : handleAddSlide()
             }
             w="100%"
-            isDisabled={state.value === ""}
-            _disabled={{
-              cursor: "not-allowed",
-            }}
+            isDisabled={state.isEditing ? !editingSlide && !state.value : !state.value}
+            _disabled={{ cursor: "not-allowed" }}
           >
             {state.isEditing ? "Update" : "Add"} Slide
           </Button>
 
-          {state.content.length >= 1 && (
-            <Flex flexDir="column" gap="12px">
-              {state.content.map((item, index) => (
-                <Flex
-                  cursor="pointer"
-                  key={uniqueId("slide")}
-                  onClick={() =>
-                    handleStateUpdate({
-                      value: item,
-                      index,
-                      isEditing: true,
-                    })
-                  }
-                  border={`1px solid ${colors.primary[5]}`}
-                  borderRadius="8px"
-                  padding="8px 16px"
-                  align="center"
-                  justify="space-between"
-                >
-                  <Text>
-                    Slide {index < 10 ? "0" : ""}
-                    {index + 1}
-                  </Text>
+          {state.isEditing && (
+            <Button
+              w="100%"
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelEdit}
+            >
+              Cancel
+            </Button>
+          )}
 
-                  <IconButton
-                    aria-label="delete"
-                    bg="transparent"
-                    _hover={{ bg: "transparent" }}
-                    onClick={() => handleRemove(index)}
-                    icon={<AiFillDelete />}
-                  />
-                </Flex>
-              ))}
+          {state.content.length >= 1 && (
+            <Flex flexDir="column" gap="10px">
+              {state.content.map((item, index) => {
+                const structured = isStructuredSlide(item);
+                const active = state.isEditing && state.index === index;
+
+                return (
+                  <Flex
+                    cursor="pointer"
+                    key={`slide-${index}`}
+                    onClick={() => handleSelect(item, index)}
+                    border={`1px solid ${
+                      active ? colors.primary[50] : colors.primary[5]
+                    }`}
+                    bg={active ? colors.primary[5] : "transparent"}
+                    borderRadius="8px"
+                    padding="8px 12px"
+                    align="center"
+                    justify="space-between"
+                    gap="6px"
+                  >
+                    <Box minW="0">
+                      <Text fontSize="14px">
+                        Slide {index < 10 ? "0" : ""}
+                        {index + 1}
+                      </Text>
+                      {structured && (
+                        <Text
+                          fontSize="11px"
+                          color="black.30"
+                          noOfLines={1}
+                          title={item.title}
+                        >
+                          {item.title}
+                        </Text>
+                      )}
+                    </Box>
+
+                    <Flex align="center" gap="2px" flexShrink={0}>
+                      {structured ? (
+                        <Badge
+                          fontSize="9px"
+                          colorScheme="purple"
+                          textTransform="none"
+                        >
+                          {LAYOUT_LABELS[item.layout]}
+                        </Badge>
+                      ) : (
+                        <Badge fontSize="9px" textTransform="none">
+                          Text
+                        </Badge>
+                      )}
+
+                      <IconButton
+                        aria-label="delete"
+                        size="sm"
+                        bg="transparent"
+                        _hover={{ bg: "transparent" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(index);
+                        }}
+                        icon={<AiFillDelete />}
+                      />
+                    </Flex>
+                  </Flex>
+                );
+              })}
             </Flex>
           )}
         </Flex>
       </Flex>
+
+      <Box
+        mt="24px"
+        p="16px 20px"
+        border={`1px solid ${colors.primary[5]}`}
+        borderRadius="12px"
+      >
+        <Text fontSize="16px" fontWeight="500" mb="12px">
+          Slide design
+        </Text>
+        <StylePicker
+          value={slideStyle}
+          onChange={(next) =>
+            updateCreateLessonFormValues({ slideStyle: next })
+          }
+        />
+      </Box>
 
       <Box position={"relative"}>
         {isTooltipActive && (

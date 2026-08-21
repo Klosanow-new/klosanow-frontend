@@ -1,0 +1,460 @@
+// Title Card — film title sequence.
+//
+// One full-bleed colour field per slide, cut once by hard geometry, with the
+// loudest type in the system: a 3-character emphasis runs to 30cqw while body
+// copy stays near 1.9cqw. Every plane is fully opaque and every edge is hard, so
+// the whole direction costs the encoder almost nothing.
+//
+// Vertical geometry is expressed in cqw, never cqh — .slide-canvas is an
+// inline-size container, so cqh does not resolve inside it.
+//
+// Type sizes live in ./scales.ts and arrive as `--fit` / `--fit-measure`.
+
+.tc-stage {
+  overflow: hidden;
+
+  --tc-ml: 6.4cqw;
+  --tc-mr: 6cqw;
+  --tc-slab: 19cqw;
+}
+
+// A fitted slot never shrinks below the size the solver chose.
+.tc-hero,
+.tc-claimtext,
+.tc-listtitle,
+.tc-seamtitle,
+.tc-slabtext,
+.tc-slabsub,
+.tc-figure,
+.tc-sidetext,
+.tc-meaningtext,
+.tc-exampletext,
+.tc-micro {
+  flex: none;
+  font-size: var(--fit);
+  max-width: var(--fit-measure);
+}
+
+// -------------------------------------------------------------------- planes
+
+.tc-plane {
+  position: absolute;
+  z-index: 0;
+  background: var(--sl-accent);
+}
+
+// The bottom slab a headline crosses. Its height and .tc-body's bottom offset
+// together define the 6cqw overlap that index.tsx clips the split copy to.
+.tc-plane--slab {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tc-slab);
+}
+
+// A full-height accent band in the right margin. It holds nothing — it is there
+// to make the composition asymmetric.
+//
+// `surface` was the first choice and was wrong: on `ink` it sits 13 luma from the
+// canvas and on `paper` 8, and two large fields that close together smear at
+// 400 kbps exactly the way a gradient does. Flat is safe; flat and nearly
+// identical is not. The accent is a definite step in every palette.
+.tc-plane--third {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 22cqw;
+  background: var(--sl-accent);
+}
+
+// The compare seam, at exactly 50cqw — index.tsx clips the title to match.
+.tc-plane--seam {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 50cqw;
+}
+
+.tc-plane--full {
+  inset: 0;
+}
+
+// -------------------------------------------------------------------- type
+
+.tc-micro {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sl-accent);
+  line-height: 1.3;
+}
+
+.tc-micro--on {
+  color: var(--sl-on-accent);
+  opacity: 0.86;
+}
+
+.tc-hero,
+.tc-claimtext,
+.tc-listtitle,
+.tc-seamtitle {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+
+// -------------------------------------------------------------------- title
+
+// Bottom-anchored so the seam through the last line stays put at any line count.
+.tc-body {
+  position: absolute;
+  left: var(--tc-ml);
+  right: var(--tc-mr);
+  bottom: 13cqw;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8cqw;
+  align-items: flex-start;
+}
+
+.tc-split {
+  position: relative;
+  width: 100%;
+}
+
+// The duplicate copy, clipped to the plane and inverted. Identical box, identical
+// text, so the two copies register exactly.
+.tc-split__over {
+  position: absolute;
+  inset: 0;
+  color: var(--sl-on-accent);
+  pointer-events: none;
+}
+
+.tc-hero {
+  line-height: 0.94;
+}
+
+.tc-slabtext {
+  position: absolute;
+  left: var(--tc-ml);
+  right: var(--tc-mr);
+  bottom: 3.6cqw;
+  z-index: 2;
+  margin: 0;
+  color: var(--sl-on-accent);
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+// ---------------------------------------------------------------- statement
+//
+// A flex split, not absolute siblings: the slab is sized by its own content and
+// the figure takes the remainder, so the claim can never spill off the accent and
+// go invisible against the canvas.
+
+.tc-stage--statement,
+.tc-stage--definition {
+  display: flex;
+  flex-direction: column;
+}
+
+// The accent slab, sized to the text it holds. min-height keeps the proportion
+// cinematic when the text is short.
+.tc-slab {
+  flex: none;
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+  min-height: 19cqw;
+  padding: 3cqw var(--tc-mr) 3.4cqw var(--tc-ml);
+  display: flex;
+  flex-direction: column;
+  gap: 1.4cqw;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.tc-figurebox {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  padding: 2cqw var(--tc-mr) 1cqw var(--tc-ml);
+}
+
+.tc-figure {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+  color: var(--sl-accent);
+  // Tight leading puts ink outside the line box; explicit padding contains it.
+  padding: 0.14em 0 0.04em;
+  white-space: nowrap;
+}
+
+.tc-claimtext {
+  line-height: 1.04;
+}
+
+.tc-slabsub {
+  margin: 0;
+  line-height: 1.3;
+  opacity: 0.88;
+}
+
+// --------------------------------------------------------------- list pages
+
+.tc-stage--list,
+.tc-stage--invert {
+  display: flex;
+  flex-direction: column;
+  padding: 4.4cqw var(--tc-mr) 4.2cqw var(--tc-ml);
+}
+
+.tc-listhead {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+  align-items: flex-start;
+}
+
+.tc-listtitle {
+  line-height: 1;
+}
+
+// Two classes on purpose. Sass `@use` emits this partial before slides.scss's own
+// rules, so the shared `.tc-stage { color: var(--sl-text) }` would otherwise win
+// on order and leave the inverted slide with white markers and dark rules.
+.tc-stage.tc-stage--invert {
+  color: var(--sl-on-accent);
+}
+
+// The credits block: tracked indices in a fixed gutter, tight leading.
+.tc-credits {
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  margin: 3.2cqw 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  // Clear of the 22cqw accent band, which starts at 78cqw.
+  max-width: 66cqw;
+
+  --tc-row: 2.4cqw;
+  --tc-lead: 1.5;
+
+  &[data-rows="1"],
+  &[data-rows="2"] {
+    --tc-row: 2.9cqw;
+  }
+  &[data-rows="3"] {
+    --tc-row: 2.5cqw;
+  }
+  &[data-rows="4"] {
+    --tc-row: 2.15cqw;
+    --tc-lead: 1.4;
+  }
+  &[data-rows="5"] {
+    --tc-row: 1.9cqw;
+    --tc-lead: 1.34;
+  }
+}
+
+.tc-credit {
+  display: grid;
+  grid-template-columns: 5.6cqw 1fr;
+  gap: 1.4cqw;
+  align-items: baseline;
+  padding: 0.85cqw 0;
+  border-bottom: 0.4cqw solid currentColor;
+
+  &:first-child {
+    border-top: 0.4cqw solid currentColor;
+  }
+}
+
+.tc-credit__mark {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  font-size: calc(var(--tc-row) * 0.94);
+  line-height: 1.2;
+  color: var(--sl-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.tc-stage--invert .tc-credit__mark {
+  color: var(--sl-on-accent);
+}
+
+.tc-credit__text {
+  min-width: 0;
+  font-size: var(--tc-row);
+  line-height: var(--tc-lead);
+  text-wrap: pretty;
+}
+
+.tc-credit__label {
+  font-family: var(--sl-font-heading);
+  display: block;
+}
+
+// A labelled row costs two lines. From three rows up the label goes inline, or
+// the credits block runs past the bottom of the frame.
+.tc-credits:not([data-rows="1"]):not([data-rows="2"]) .tc-credit__label {
+  display: inline;
+
+  &::after {
+    content: ". ";
+  }
+}
+
+.tc-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.6cqw;
+  height: 3.6cqw;
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+  font-size: calc(var(--tc-row) * 0.95);
+  line-height: 1;
+}
+
+.tc-square {
+  display: block;
+  width: 1.8cqw;
+  height: 1.8cqw;
+  background: currentColor;
+}
+
+// -------------------------------------------------------------------- pair
+
+.tc-stage--pair {
+  display: grid;
+  grid-template-columns: 46cqw 1fr;
+}
+
+.tc-frame {
+  position: relative;
+  overflow: hidden;
+  background: var(--sl-surface-alt);
+}
+
+.tc-frame--full {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.tc-frame__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tc-pairtext {
+  min-width: 0;
+  padding: 4.4cqw var(--tc-mr) 4.2cqw 4.4cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  .tc-credits {
+    margin-top: 2.4cqw;
+    max-width: 100%;
+  }
+}
+
+// ----------------------------------------------------------------- compare
+//
+// The frame is split in solid colour down the middle and the title runs across
+// the seam, so the headline itself carries the comparison.
+
+.tc-stage--compare {
+  display: flex;
+  flex-direction: column;
+  padding: 4.2cqw var(--tc-mr) 4.4cqw var(--tc-ml);
+}
+
+.tc-seamhead {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 100%;
+}
+
+.tc-seamtitle {
+  line-height: 1;
+}
+
+.tc-sides {
+  position: relative;
+  z-index: 2;
+  margin-top: 3.4cqw;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  // The gap straddles the 50cqw seam so neither column sits on the boundary.
+  grid-template-columns: 1fr 1fr;
+  gap: 6cqw;
+  align-items: start;
+}
+
+.tc-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6cqw;
+  align-items: flex-start;
+}
+
+.tc-side--b {
+  color: var(--sl-on-accent);
+}
+
+.tc-sidetext {
+  margin: 0;
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+// -------------------------------------------------------------- definition
+
+.tc-term {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4.6cqw var(--tc-mr) 2cqw var(--tc-ml);
+  display: flex;
+  flex-direction: column;
+  gap: 1.6cqw;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.tc-meaningtext {
+  margin: 0;
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.tc-example {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6cqw;
+}
+
+.tc-exampletext {
+  margin: 0;
+  line-height: 1.3;
+  opacity: 0.9;
+}

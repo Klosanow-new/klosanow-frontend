@@ -24,7 +24,10 @@ const ScrollLessonContent: React.FC = () => {
     updateCreateLessonFormValues,
   } = React.useContext(CreateLessonFormContext);
 
-  const [value, setValue] = React.useState(content[0] || "");
+  // Scroll authors a single HTML document, so its one entry is always a string.
+  const [value, setValue] = React.useState(
+    typeof content[0] === "string" ? content[0] : ""
+  );
   const [loading, setLoading] = React.useState(false);
 
   const handleProceed = () => {

@@ -17,6 +17,7 @@ import {
 } from "src/utils/constant";
 import { Box } from "@chakra-ui/react";
 import { deletedFile } from "src/utils/file-upload";
+import { decodeContent } from "../../slides/slideCodec";
 
 const CreateLessonForm: React.FC = () => {
   const [_, setSearchParams] = useSearchParams();
@@ -26,13 +27,15 @@ const CreateLessonForm: React.FC = () => {
 
   const draft_id = getDraftId();
 
-  const thumbnail_url = getFileUrl("thumbnail_url");
-  const video_url = getFileUrl("video_url");
-
   const draftData = drafts.data.find((item) => item._id === draft_id);
 
+  const decoded = React.useMemo(
+    () => decodeContent(draftData?.content),
+    [draftData]
+  );
+
   const step = React.useMemo(() => {
-    if (draft_id && draftData?.content?.length !== 0)
+    if (draft_id && decoded.items.length !== 0)
       return CreateLessonFormStepsType.Content;
     else if (draft_id) return CreateLessonFormStepsType.FormInfo;
     else return CreateLessonFormStepsType.Template;
@@ -51,7 +54,8 @@ const CreateLessonForm: React.FC = () => {
       thumbnailSize: draftData?.thumbnailSize || 0,
     },
     template: draftData?.template || LessonTemplateType.Scroll,
-    content: draftData?.content || [],
+    content: decoded.items,
+    slideStyle: decoded.style,
   });
 
   const lessonSteps = state.activeStep
@@ -77,18 +81,28 @@ const CreateLessonForm: React.FC = () => {
     setSearchParams({ step: lessonSteps.name });
   }, [state.activeStep]);
 
+  // Orphan sweep: media uploaded during a session that never reached a saved
+  // draft or a published lesson. Both keys are cleared the moment a draft or a
+  // lesson takes ownership, so whatever is still here on mount is unreferenced.
+  //
+  // Mount-only, deliberately. Keying this on the localStorage values re-ran it
+  // once the current session's own upload landed and deleted the file the form
+  // was about to submit. hasFormStarted didn't guard that either: on the
+  // draft-resume path the template step that sets it never renders, so it stayed
+  // false for the whole session.
   React.useEffect(() => {
-    if (!state.hasFormStarted) {
-      if (thumbnail_url) {
-        deletedFile(thumbnail_url);
-        clearFileUrl("thumbnail_url");
-      }
-      if (video_url) {
-        deletedFile(video_url);
-        clearFileUrl("video_url");
-      }
+    const orphanedThumbnail = getFileUrl("thumbnail_url");
+    const orphanedVideo = getFileUrl("video_url");
+
+    if (orphanedThumbnail) {
+      deletedFile(orphanedThumbnail);
+      clearFileUrl("thumbnail_url");
     }
-  }, [thumbnail_url, state.hasFormStarted, video_url]);
+    if (orphanedVideo) {
+      deletedFile(orphanedVideo);
+      clearFileUrl("video_url");
+    }
+  }, []);
 
   return (
     <CreateLessonFormContext.Provider

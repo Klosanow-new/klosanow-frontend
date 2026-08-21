@@ -23,6 +23,66 @@ export enum FileUploadResponseStatus {
   Invalid = "invalid",
 }
 
+// Recorders report their output as e.g. "video/webm;codecs=vp8". The codec
+// parameter is not part of the type we want stored or mapped to an extension.
+export const baseMimeType = (mimeType: string) =>
+  mimeType.split(";")[0].trim().toLowerCase();
+
+const MIME_EXTENSIONS: Record<string, string> = {
+  "video/webm": "webm",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/x-matroska": "mkv",
+  "audio/webm": "webm",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/ogg": "ogg",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+export const extensionForMimeType = (mimeType: string) =>
+  MIME_EXTENSIONS[baseMimeType(mimeType)] ?? "";
+
+/**
+ * Upload names have to survive three hops the raw lesson title does not.
+ *
+ * 1. Storage infers the object's Content-Type from the extension. Without one
+ *    the file comes back as application/octet-stream, so a browser opening the
+ *    url downloads it instead of playing it — and the download has no extension
+ *    either, which is what "the video is corrupted" actually looks like.
+ * 2. The finished url gets pasted into chat apps, which end a link at the first
+ *    whitespace. A title like "Intro to Algebra" truncated the link to
+ *    ".../vid-Intro" for whoever received it.
+ * 3. If storage keys by the original name, two lessons sharing a title collide
+ *    and one overwrites the other. lodash uniqueId only counts within a page
+ *    session, so it cannot carry that on its own.
+ */
+export const buildMediaFileName = (
+  prefix: string,
+  label: string,
+  mimeType: string,
+) => {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  const extension = extensionForMimeType(mimeType);
+  const stamp = `${Date.now().toString(36)}${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
+
+  return `${prefix}-${slug || "untitled"}-${stamp}${
+    extension ? `.${extension}` : ""
+  }`;
+};
+
 export const validateFile = (file: File) => {
   const byte = 1024;
   const size = Math.floor(file.size / byte); // size in KB

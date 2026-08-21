@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Flex, Text, useToast } from "@chakra-ui/react";
 import { CreateLessonFormContext } from "../../context/CreateLessonFormContext";
 import { DeleteIcon, SaveIcon } from "../../assets/svgs";
-import { CreateLessonFormValues } from "src/types";
+import { CreateLessonFormValues, LessonTemplateType } from "src/types";
 import { useNavigate } from "react-router-dom";
 import { allLessonsPagePath } from "src/data/pageUrl";
 import { postLessons } from "src/api-endpoints/lessons";
@@ -10,6 +10,7 @@ import { postUser } from "src/api-endpoints/user/user.api";
 import { deletedFile, FileUploadResponseStatus } from "src/utils/file-upload";
 import OverlayLoader from "src/components/OverlayLoader";
 import { clearFileUrl } from "src/utils/constant";
+import { encodeContent } from "../../slides/slideCodec";
 
 const PreviewVideo = () => {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ const PreviewVideo = () => {
     videoSize,
     form_info,
     content,
+    template,
+    slideStyle,
     updateCreateLessonFormValues,
   } = React.useContext(CreateLessonFormContext);
 
@@ -40,6 +43,15 @@ const PreviewVideo = () => {
     handleStateUpdate({ loading: true, message: "Submiting" });
 
     try {
+      // Scroll keeps its content shape byte-identical to before; only the slide
+      // template carries the design-system meta entry.
+      const encodedContent =
+        template === LessonTemplateType.Slide
+          ? encodeContent(slideStyle, content)
+          : content.map((item) =>
+              typeof item === "string" ? item : JSON.stringify(item)
+            );
+
       const formData: CreateLessonFormValues = {
         title: form_info.title,
         about: form_info.description,
@@ -48,7 +60,7 @@ const PreviewVideo = () => {
         tag: "uncategorized",
         videoSize,
         videoUrl,
-        content,
+        content: encodedContent,
       };
 
       if (canUpdate) {
@@ -94,7 +106,12 @@ const PreviewVideo = () => {
         duration: 2500,
         position: "top-right",
       });
+      // Both keys mean "uploaded, not yet owned by a draft or lesson". The saved
+      // lesson owns both now, so release both. Leaving thumbnail_url set made the
+      // next lesson's orphan sweep delete this lesson's thumbnail out of S3 —
+      // the row kept its thumbnailUrl and the dashboard <img> got a 403.
       clearFileUrl("video_url");
+      clearFileUrl("thumbnail_url");
       handleStateUpdate(initialState);
       navigate(allLessonsPagePath);
     } catch (error: any) {

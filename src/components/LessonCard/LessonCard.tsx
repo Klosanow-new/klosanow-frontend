@@ -14,6 +14,8 @@ import { Lesson } from "../../types";
 import { capitalize } from "lodash";
 import { OptionWhiteIcon } from "../../assets/svgs";
 import { copyText } from "src/pages/StudyChat/utils";
+import { shareableLessonUrl } from "src/data/pageUrl";
+import thumbnailPlaceholder from "src/assets/images/thumb.jpg";
 
 interface LessonCardProps {
   lesson: Lesson;
@@ -103,6 +105,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
           height="196px"
           objectFit="cover"
           src={thumbnailUrl}
+          fallbackSrc={thumbnailPlaceholder}
           alt={title}
           borderRadius="xl"
           bg="#eee"
@@ -135,7 +138,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
                   fontSize="12px"
                   padding="4px 6px"
                   onClick={() =>
-                    copyText(lesson.videoUrl, () => {
+                    copyText(shareableLessonUrl(lesson._id), () => {
                       toast({
                         title: `${lesson.title} copied`,
                         description: "Lesson ready to share",

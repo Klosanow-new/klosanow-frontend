@@ -1,0 +1,449 @@
+// Broadsheet — Swiss editorial print.
+//
+// No panels, no shadows, no shapes. Structure comes from a heavy rule at the top
+// of the page, a 12-column measure, and columns left deliberately empty. Rules
+// are never thinner than 0.4cqw (~5px at 1280) because anything finer breaks up
+// after the VP8 encode.
+//
+// Content hangs from the top rule rather than floating in the vertical centre,
+// so a one-word title and a 60-character title are both anchored to the same
+// line — which is what stops short slides looking accidental.
+//
+// Type sizes are not written here. Every fitted slot takes `font-size: var(--fit)`
+// and `max-width: var(--fit-measure)`, both set by ./scales.ts via fitStyle(), so
+// the width the solver measured against is the width the browser lays out to.
+
+.bs-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+
+  --bs-mt: 3.8cqw;
+  --bs-mb: 3.8cqw;
+  --bs-ml: 5.6cqw;
+  --bs-mr: 5cqw;
+}
+
+// Text page + full-bleed image. The image column runs to three edges.
+.bs-stage--split {
+  grid-template-columns: 1fr 38cqw;
+  --bs-mr: 3.4cqw;
+}
+
+.bs-page {
+  min-width: 0;
+  padding: var(--bs-mt) var(--bs-mr) var(--bs-mb) var(--bs-ml);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+// A fitted slot never shrinks below the size the solver chose.
+.bs-hero,
+.bs-claim,
+.bs-head,
+.bs-band__title,
+.bs-standfirst,
+.bs-meaning,
+.bs-figure,
+.bs-column__text,
+.bs-footnote__text {
+  flex: none;
+  font-size: var(--fit);
+  max-width: var(--fit-measure);
+}
+
+// ------------------------------------------------------------------ running head
+
+.bs-slug {
+  flex: none;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2cqw;
+  min-height: 1.9cqw;
+}
+
+.bs-slug__label,
+.bs-slug__index {
+  font-size: var(--fit, 1.5cqw);
+  max-width: var(--fit-measure, none);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sl-accent);
+  line-height: 1.25;
+}
+
+.bs-slug__index {
+  white-space: nowrap;
+}
+
+.bs-rule {
+  flex: none;
+  width: 100%;
+  background: var(--sl-text);
+  margin: 1.1cqw 0 0;
+}
+
+.bs-rule--heavy {
+  height: 0.9cqw;
+}
+.bs-rule--mid {
+  height: 0.45cqw;
+}
+.bs-rule--hair {
+  height: 0.4cqw;
+  background: var(--sl-text-muted);
+}
+
+// ------------------------------------------------------------------- headlines
+
+.bs-hero,
+.bs-claim,
+.bs-head,
+.bs-band__title {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.bs-hero {
+  line-height: 0.96;
+  margin-top: 1.8cqw;
+  letter-spacing: -0.032em;
+}
+
+.bs-hero--tall {
+  margin-top: 3cqw;
+}
+
+// The standfirst is the only place body copy is set large — it is the bridge
+// between the headline and the small type.
+.bs-standfirst {
+  margin: 2.2cqw 0 0;
+  color: var(--sl-text-muted);
+  line-height: 1.34;
+  text-wrap: pretty;
+}
+
+// The end mark: one solid square, bottom-left, holding the composition down.
+.bs-mark {
+  margin-top: auto;
+  flex: none;
+  width: 1.8cqw;
+  height: 1.8cqw;
+  background: var(--sl-accent);
+}
+
+// ------------------------------------------------------------------- statement
+
+.bs-page--statement {
+  --bs-mt: 3.4cqw;
+  --bs-mb: 3.2cqw;
+  justify-content: center;
+}
+
+.bs-figure {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  color: var(--sl-accent);
+  // A tight line-height lets glyph ink sit outside its box, so the box gets
+  // explicit padding rather than relying on the line box to contain it.
+  padding: 0.12em 0 0.06em;
+  white-space: nowrap;
+}
+
+.bs-claim {
+  line-height: 1.04;
+  margin-top: 1.6cqw;
+}
+
+// ------------------------------------------------------------------ list pages
+
+.bs-head {
+  line-height: 1.02;
+  margin-top: 1.5cqw;
+}
+
+.bs-list {
+  list-style: none;
+  margin: 2.2cqw 0 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  // Fewer points earn bigger type. This is the whole reason a 2-item and a
+  // 5-item list both look composed instead of one looking sparse.
+  --bs-row: 2.5cqw;
+  --bs-gutter: 6.4cqw;
+
+  &[data-rows="1"],
+  &[data-rows="2"] {
+    --bs-row: 2.9cqw;
+  }
+  &[data-rows="3"] {
+    --bs-row: 2.5cqw;
+  }
+  &[data-rows="4"] {
+    --bs-row: 2.15cqw;
+  }
+  &[data-rows="5"] {
+    --bs-row: 1.85cqw;
+  }
+}
+
+// The narrow column beside a bleed image: smaller rows, tighter gutter.
+.bs-list--narrow {
+  --bs-gutter: 4.2cqw;
+  --bs-row: 2.1cqw;
+
+  &[data-rows="1"],
+  &[data-rows="2"] {
+    --bs-row: 2.4cqw;
+  }
+  &[data-rows="3"] {
+    --bs-row: 2.1cqw;
+  }
+  &[data-rows="4"] {
+    --bs-row: 1.9cqw;
+  }
+  &[data-rows="5"] {
+    --bs-row: 1.7cqw;
+  }
+}
+
+.bs-row {
+  display: grid;
+  grid-template-columns: var(--bs-gutter) 1fr;
+  gap: 1.6cqw;
+  align-items: start;
+  padding: 1cqw 0 0.8cqw;
+  border-top: 0.4cqw solid var(--sl-text-muted);
+
+  &:first-child {
+    border-top-width: 0.45cqw;
+    border-top-color: var(--sl-text);
+  }
+}
+
+.bs-row__index {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  font-size: calc(var(--bs-row) * 0.92);
+  line-height: 1.28;
+  color: var(--sl-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bs-row__body {
+  min-width: 0;
+  font-size: var(--bs-row);
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+.bs-row__label {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  display: block;
+  color: var(--sl-text);
+}
+
+// A labelled row costs two lines. From four rows up the label goes inline, or
+// the table runs past the bottom of the page.
+.bs-list[data-rows="4"],
+.bs-list[data-rows="5"] {
+  .bs-row__label {
+    display: inline;
+
+    &::after {
+      content: ". ";
+    }
+  }
+}
+
+// A solid numeral tile, for steps.
+.bs-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.6cqw;
+  height: 3.6cqw;
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+  font-size: calc(var(--bs-row) * 0.95);
+  line-height: 1;
+  font-weight: 700;
+}
+
+.bs-tick {
+  display: block;
+  width: 2.2cqw;
+  height: 2.2cqw;
+  margin-top: 0.4cqw;
+  background: var(--sl-accent);
+  clip-path: polygon(0 46%, 38% 100%, 100% 8%, 100% 30%, 38% 100%, 0 68%);
+}
+
+// --------------------------------------------------------------------- summary
+//
+// Recap gets a full-bleed accent band instead of a rule, so the beat reads
+// differently from the other list pages at a glance.
+
+.bs-band {
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+  padding: 3cqw 5cqw 3.2cqw 5.6cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9cqw;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.bs-band__label {
+  flex: none;
+  font-size: var(--fit);
+  max-width: var(--fit-measure);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.82;
+  line-height: 1.25;
+}
+
+.bs-band__title {
+  line-height: 1.02;
+}
+
+.bs-page--underband {
+  --bs-mt: 2.6cqw;
+  --bs-mb: 3.2cqw;
+
+  .bs-list {
+    margin-top: 0;
+  }
+}
+
+// --------------------------------------------------------------------- compare
+
+.bs-columns {
+  margin-top: 2.6cqw;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  // Deliberately unequal — a 50/50 split reads as a table, not a page.
+  grid-template-columns: 1.12fr 1fr;
+  gap: 4.6cqw;
+  align-items: start;
+}
+
+.bs-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  // The seam between the columns.
+  & + & {
+    border-left: 0.4cqw solid var(--sl-text-muted);
+    padding-left: 4.4cqw;
+    margin-left: -2.3cqw;
+  }
+}
+
+.bs-column__rank {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  font-size: 5.4cqw;
+  line-height: 0.9;
+  color: var(--sl-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bs-column__label {
+  flex: none;
+  margin-top: 1.4cqw;
+  font-size: var(--fit);
+  max-width: var(--fit-measure);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.bs-column__text {
+  margin: 1.2cqw 0 0;
+  line-height: 1.34;
+  text-wrap: pretty;
+}
+
+// ------------------------------------------------------------------ definition
+
+.bs-page--definition {
+  --bs-mb: 3.6cqw;
+}
+
+.bs-meaning {
+  margin: 2.4cqw 0 0;
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+// The example is set in the bottom margin as a footnote, not in a box.
+.bs-footnote {
+  margin-top: auto;
+  padding-top: 1.8cqw;
+  width: 100%;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bs-footnote__label {
+  margin-top: 1cqw;
+  font-size: 1.5cqw;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sl-accent);
+}
+
+.bs-footnote__text {
+  margin: 0.7cqw 0 0;
+  line-height: 1.3;
+  color: var(--sl-text-muted);
+}
+
+// ---------------------------------------------------------------------- bleed
+
+.bs-bleed {
+  position: relative;
+  overflow: hidden;
+  background: var(--sl-surface-alt);
+  // A solid rule on the seam, so the image meets the page on a drawn edge
+  // instead of a soft photographic one.
+  border-left: 0.5cqw solid var(--sl-accent);
+}
+
+.bs-bleed--left {
+  order: -1;
+  border-left: 0;
+  border-right: 0.5cqw solid var(--sl-accent);
+}
+
+.bs-bleed__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

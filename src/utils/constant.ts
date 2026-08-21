@@ -76,3 +76,22 @@ export const setFileUrl = (fileKey: FileUrlKey, file_url: string) =>
 
 export const clearFileUrl = (fileKey: FileUrlKey) =>
   localStorage.setItem(fileKey, "");
+
+/**
+ * Where to land after signing in. Set when a guarded route turns a visitor
+ * away, so someone opening a shared lesson link while signed out still reaches
+ * the lesson instead of the dashboard.
+ *
+ * sessionStorage on purpose: the axios 401 interceptor calls
+ * localStorage.clear() before bouncing to sign-in, which would wipe this.
+ */
+const POST_AUTH_REDIRECT_KEY = "post_auth_redirect";
+
+export const setPostAuthRedirect = (path: string) =>
+  sessionStorage.setItem(POST_AUTH_REDIRECT_KEY, path);
+
+export const takePostAuthRedirect = () => {
+  const path = sessionStorage.getItem(POST_AUTH_REDIRECT_KEY);
+  sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY);
+  return path;
+};

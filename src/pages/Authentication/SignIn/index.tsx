@@ -37,7 +37,7 @@ import { useDispatch } from "react-redux";
 import { getSingleUser } from "src/api-endpoints/user/user.api";
 // import { SingleUserI } from "src/api-endpoints/user/user.interface";
 import { updateUserData } from "src/redux/reducers/userReducer";
-import { savedwithExp } from "src/utils/constant";
+import { savedwithExp, takePostAuthRedirect } from "src/utils/constant";
 import { SignInResponse } from "src/api-endpoints/auth/interface";
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
@@ -75,7 +75,7 @@ export default function SignIn() {
 
     onSuccess: (data: UserI) => {
       dispatch(updateUserData(data));
-      navigate("/dashboard");
+      navigate(takePostAuthRedirect() || "/dashboard");
     },
     enabled: !!verifyRes,
   });

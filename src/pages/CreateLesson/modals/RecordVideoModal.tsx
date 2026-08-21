@@ -28,15 +28,19 @@ import Draggable from "react-draggable";
 import { GiResize } from "react-icons/gi";
 import { RiDragMove2Line } from "react-icons/ri";
 import useMediaRecorder from "src/utils/useMediaRecorder";
-import { LessonTemplateType } from "src/types";
+import { LessonTemplateType, SlideItem } from "src/types";
 import { MoveIcon, PauseIcon, RecordIcon, StopRecordIcon } from "../assets";
 import { CreateLessonFormContext } from "../context/CreateLessonFormContext";
+import SlideRenderer from "../slides/SlideRenderer";
+import { buildTitleSlide } from "../slides/buildTitleSlide";
 // import { btnStyles } from "../data";
 import { PlayIcon } from "src/assets/svgs";
 import {
   FileUploadResponseStatus,
   uploadFile,
   getUploadErrorMessage,
+  baseMimeType,
+  buildMediaFileName,
 } from "src/utils/file-upload";
 import OverlayLoader from "src/components/OverlayLoader/OverlayLoader";
 import { setFileUrl } from "src/utils/constant";
@@ -121,10 +125,18 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
     hoverErase,
   );
 
-  const { template, content, form_info, updateCreateLessonFormValues } =
-    React.useContext(CreateLessonFormContext);
+  const {
+    template,
+    content,
+    form_info,
+    slideStyle,
+    updateCreateLessonFormValues,
+  } = React.useContext(CreateLessonFormContext);
 
-  const initialSlide = `
+  const isSlideTemplate = template === LessonTemplateType.Slide;
+
+  // Scroll stays on the original markup — it is one long document, not slides.
+  const scrollTitle = `
     <p style='font-size: 32px; font-weight: 500'>${capitalize(
       form_info.title,
     )}</p>
@@ -140,7 +152,8 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
     </div>
   `;
 
-  const slides = [initialSlide, ...content];
+  const slides: SlideItem[] = [buildTitleSlide(form_info), ...content];
+  const scrollItems = [scrollTitle, ...content];
 
   const handleStopRecording = async () => {
     handleStateUpdate({
@@ -171,9 +184,18 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
       loadingMessage: "Submitting Preview...",
     });
     try {
-      const file = new File([blob], `vid-${form_info.title}${uniqueId("_")}`, {
-        type: blob.type,
-      });
+      // The stored object's Content-Type is derived from this name, and the
+      // resulting url is what gets shared, so it needs an extension and no
+      // spaces. blob.type is "video/webm;codecs=vp8"; the codec parameter is
+      // dropped so the served Content-Type stays a plain, well-understood type.
+      // An untyped blob would fail validateFile, so fall back to what the
+      // recorder is configured to produce.
+      const type = baseMimeType(blob.type || "video/webm");
+      const file = new File(
+        [blob],
+        buildMediaFileName("vid", form_info.title, type),
+        { type },
+      );
 
       const res = await uploadFile(file, (percent, retryMessage) => {
         handleStateUpdate({ loadingMessage: retryMessage || `Uploading... ${percent}%` });
@@ -341,22 +363,22 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
               <Box
                 id="record-slide-container"
                 h="100%"
-                padding="24px"
-                overflow="scroll"
+                padding={isSlideTemplate ? "0" : "24px"}
+                overflow={isSlideTemplate ? "hidden" : "scroll"}
                 position="relative"
                 className="hide-scroll"
               >
-                {template === LessonTemplateType.Slide ? (
-                  <div
-                    className="slide"
-                    dangerouslySetInnerHTML={{ __html: slides[state.index] }}
+                {isSlideTemplate ? (
+                  <SlideRenderer
+                    item={slides[state.index]}
+                    style={slideStyle}
                   />
                 ) : (
-                  slides.map((item) => (
+                  scrollItems.map((item) => (
                     <div
                       key={uniqueId("slide-item")}
                       className="slide"
-                      dangerouslySetInnerHTML={{ __html: item }}
+                      dangerouslySetInnerHTML={{ __html: item as string }}
                     />
                   ))
                 )}

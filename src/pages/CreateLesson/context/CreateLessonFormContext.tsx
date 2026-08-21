@@ -1,5 +1,12 @@
 import React from "react";
-import { CreateLessonFormStepsType, LessonTemplateType } from "src/types";
+import {
+  CreateLessonFormStepsType,
+  LessonTemplateType,
+  SlideItem,
+  SlideStyle,
+} from "src/types";
+import { DEFAULT_SLIDE_STYLE } from "../slides/slideCodec";
+
 export interface CreateLessonFormDefaultValues {
   draft_id: string;
   activeStep: CreateLessonFormStepsType;
@@ -12,7 +19,8 @@ export interface CreateLessonFormDefaultValues {
     tutor_name: string;
     thumbnailSize: number;
   };
-  content: Array<string>;
+  content: Array<SlideItem>;
+  slideStyle: SlideStyle;
   videoUrl: string;
   videoSize: number;
   showPreviewVideo: boolean;
@@ -40,6 +48,7 @@ export const DefaultFormValues: CreateLessonFormDefaultValues = {
     thumbnailSize: 0,
   },
   content: [],
+  slideStyle: DEFAULT_SLIDE_STYLE,
   videoSize: 0,
   videoUrl: "",
   showPreviewVideo: false,

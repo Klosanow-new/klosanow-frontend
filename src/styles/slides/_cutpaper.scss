@@ -1,0 +1,566 @@
+// Cut Paper — screen-print collage.
+//
+// Two to four opaque planes per slide, corners cut at 45 degrees on a consistent
+// diagonal, and depth from registration: every plane draws a duplicate of itself
+// offset 1.7cqw with zero blur. A hard high-contrast offset is the one depth cue
+// a 400 kbps encoder renders for free — unlike a soft shadow, there is no
+// gradient in it to band.
+//
+// Type sizes live in ./scales.ts and arrive as `--fit` / `--fit-measure`.
+
+.cp-stage {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  // Bottom padding clears the registration offset of the last plane.
+  padding: 4.6cqw 5.4cqw 5.2cqw;
+
+  --cp-reg: 1.7cqw;
+  --cp-cut: 3.4cqw;
+}
+
+// A fitted slot never shrinks below the size the solver chose.
+.cp-hero,
+.cp-claimtext,
+.cp-headtitle,
+.cp-termtext,
+.cp-sub,
+.cp-figure,
+.cp-pairtextline,
+.cp-meaning,
+.cp-exampletext,
+.cp-label {
+  flex: none;
+  font-size: var(--fit);
+  max-width: var(--fit-measure);
+}
+
+// ------------------------------------------------------------------- planes
+
+.cp-plane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-plane__reg {
+  position: absolute;
+  inset: 0;
+  background: var(--sl-accent);
+  z-index: 0;
+}
+
+.cp-plane__face {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cp-plane--paper .cp-plane__face {
+  background: var(--sl-surface);
+}
+.cp-plane--alt .cp-plane__face {
+  background: var(--sl-surface-alt);
+}
+.cp-plane--accent .cp-plane__face {
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+}
+
+// An accent face needs a different registration colour or the offset vanishes.
+// surface-alt rather than text: on a dark palette `text` is pure white, which
+// turned the offset into a heavy white outline instead of a second ink.
+.cp-plane--accent .cp-plane__reg {
+  background: var(--sl-surface-alt);
+}
+
+.cp-reg--se .cp-plane__reg {
+  transform: translate(var(--cp-reg), var(--cp-reg));
+}
+.cp-reg--sw .cp-plane__reg {
+  transform: translate(calc(var(--cp-reg) * -1), var(--cp-reg));
+}
+.cp-reg--ne .cp-plane__reg {
+  transform: translate(var(--cp-reg), calc(var(--cp-reg) * -1));
+}
+.cp-reg--none .cp-plane__reg {
+  display: none;
+}
+
+// The 45-degree cut, applied to the face and its registration copy together.
+@mixin cut($corner) {
+  @if $corner == tl {
+    clip-path: polygon(var(--cp-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cp-cut));
+  } @else if $corner == tr {
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--cp-cut)) 0,
+      100% var(--cp-cut),
+      100% 100%,
+      0 100%
+    );
+  } @else if $corner == br {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--cp-cut)),
+      calc(100% - var(--cp-cut)) 100%,
+      0 100%
+    );
+  } @else if $corner == bl {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      var(--cp-cut) 100%,
+      0 calc(100% - var(--cp-cut))
+    );
+  }
+}
+
+.cp-cut--tl {
+  .cp-plane__face,
+  .cp-plane__reg {
+    @include cut(tl);
+  }
+}
+.cp-cut--tr {
+  .cp-plane__face,
+  .cp-plane__reg {
+    @include cut(tr);
+  }
+}
+.cp-cut--br {
+  .cp-plane__face,
+  .cp-plane__reg {
+    @include cut(br);
+  }
+}
+.cp-cut--bl {
+  .cp-plane__face,
+  .cp-plane__reg {
+    @include cut(bl);
+  }
+}
+
+// A solid half-disc anchored in a corner, bled off two edges.
+.cp-disc {
+  position: absolute;
+  z-index: 0;
+  width: 30cqw;
+  height: 30cqw;
+  border-radius: 50%;
+  background: var(--sl-surface-alt);
+}
+
+.cp-disc--bl {
+  left: -13cqw;
+  bottom: -13cqw;
+}
+.cp-disc--br {
+  right: -13cqw;
+  bottom: -13cqw;
+}
+.cp-disc--tr {
+  right: -13cqw;
+  top: -13cqw;
+}
+
+// --------------------------------------------------------------------- type
+
+.cp-label {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sl-accent);
+  line-height: 1.3;
+}
+
+.cp-label--on {
+  color: var(--sl-on-accent);
+  opacity: 0.85;
+}
+
+.cp-hero,
+.cp-claimtext,
+.cp-headtitle,
+.cp-termtext {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+// -------------------------------------------------------------------- title
+
+.cp-stage--statement {
+  justify-content: center;
+}
+
+.cp-titletext {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2cqw;
+}
+
+.cp-hero {
+  line-height: 0.96;
+}
+
+.cp-sub {
+  margin: 0;
+  color: var(--sl-text-muted);
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+// The image plane on the title slide: right-hand third, cut top-left.
+.cp-titleplane {
+  position: absolute;
+  right: 5.4cqw;
+  top: 6cqw;
+  bottom: 6cqw;
+  width: 40cqw;
+  z-index: 1;
+}
+
+.cp-cutout__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+// ---------------------------------------------------------------- statement
+
+.cp-figureplane {
+  position: absolute;
+  left: 5.4cqw;
+  top: 5cqw;
+  width: 46cqw;
+  height: 30cqw;
+  z-index: 1;
+
+  .cp-plane__face {
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.cp-figure {
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  line-height: 0.84;
+  letter-spacing: -0.04em;
+  padding: 0.12em 0.06em 0.05em;
+  white-space: nowrap;
+}
+
+.cp-claim {
+  position: absolute;
+  left: 5.4cqw;
+  right: 5.4cqw;
+  bottom: 5cqw;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6cqw;
+  align-items: flex-start;
+}
+
+.cp-claimtext {
+  line-height: 1.04;
+}
+
+// -------------------------------------------------------------- list pages
+
+.cp-head {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1cqw;
+  align-items: flex-start;
+}
+
+.cp-headtitle {
+  line-height: 1.02;
+}
+
+// Each item is its own strip of paper.
+.cp-strips {
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  // 2.4cqw, not 3: Fraunces' optical-size axis makes it set a 60-character head
+  // wider than the fit solver's estimate, so a five-strip stack needs the slack.
+  margin: 2.4cqw 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.3cqw;
+
+  --cp-row: 2.4cqw;
+  --cp-pad: 1.5cqw;
+
+  &[data-rows="1"],
+  &[data-rows="2"] {
+    --cp-row: 2.8cqw;
+    --cp-pad: 2.2cqw;
+  }
+  &[data-rows="3"] {
+    --cp-row: 2.45cqw;
+    --cp-pad: 1.7cqw;
+  }
+  &[data-rows="4"] {
+    --cp-row: 2.1cqw;
+    --cp-pad: 1.2cqw;
+    gap: 1cqw;
+  }
+  &[data-rows="5"] {
+    --cp-row: 1.75cqw;
+    --cp-pad: 0.78cqw;
+    gap: 0.65cqw;
+    // A smaller offset keeps five strips plus registration inside the page.
+    --cp-reg: 0.9cqw;
+  }
+}
+
+// The staircase, for steps. Capped at three levels so the deepest strip keeps
+// its measure at the 90-character cap.
+.cp-strips--stair .cp-strip {
+  margin-left: calc(var(--cp-step, 0) * 3cqw);
+}
+
+.cp-strip {
+  display: flex;
+  min-width: 0;
+
+  .cp-plane {
+    flex: 1 1 auto;
+  }
+
+  .cp-plane__face {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5cqw;
+    padding: var(--cp-pad) 4.2cqw var(--cp-pad) 1.8cqw;
+  }
+}
+
+.cp-strip__mark {
+  flex: none;
+}
+
+.cp-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.4cqw;
+  height: 3.4cqw;
+  padding: 0 0.5cqw;
+  background: var(--sl-accent);
+  color: var(--sl-on-accent);
+  font-family: var(--sl-font-heading);
+  font-weight: 700;
+  font-size: calc(var(--cp-row) * 0.9);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-tick {
+  display: block;
+  width: 2.6cqw;
+  height: 2.6cqw;
+  margin-top: 0.2cqw;
+  background: var(--sl-accent);
+  clip-path: polygon(0 46%, 38% 100%, 100% 8%, 100% 30%, 38% 100%, 0 68%);
+}
+
+.cp-strip__text {
+  min-width: 0;
+  font-size: var(--cp-row);
+  line-height: 1.34;
+  text-wrap: pretty;
+}
+
+.cp-strip__label {
+  font-family: var(--sl-font-heading);
+  display: block;
+}
+
+// A labelled strip costs two lines. From four strips up the label goes inline,
+// or the stack runs past the bottom of the frame.
+.cp-strips[data-rows="4"],
+.cp-strips[data-rows="5"] {
+  .cp-strip__label {
+    display: inline;
+
+    &::after {
+      content: ". ";
+    }
+  }
+}
+
+// --------------------------------------------------------------------- pair
+
+.cp-stage--pair {
+  display: grid;
+  grid-template-columns: 1fr 40cqw;
+  gap: 4.4cqw;
+  align-items: stretch;
+}
+
+.cp-pairtext {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cp-pairplane {
+  position: relative;
+  z-index: 1;
+  margin: 1cqw 0 1.4cqw;
+}
+
+.cp-plainlist {
+  list-style: none;
+  margin: 2.6cqw 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqw;
+
+  --cp-row: 2.4cqw;
+
+  &[data-rows="4"] {
+    --cp-row: 2.2cqw;
+    gap: 1.2cqw;
+  }
+  &[data-rows="5"] {
+    --cp-row: 2cqw;
+    gap: 1cqw;
+  }
+
+  li {
+    display: flex;
+    gap: 1.4cqw;
+    align-items: flex-start;
+    min-width: 0;
+    font-size: var(--cp-row);
+    line-height: 1.32;
+    text-wrap: pretty;
+  }
+}
+
+.cp-bullet {
+  flex: none;
+  width: 1.5cqw;
+  height: 1.5cqw;
+  margin-top: 0.5em;
+  background: var(--sl-accent);
+}
+
+// ------------------------------------------------------------------ compare
+
+.cp-pair {
+  position: relative;
+  z-index: 2;
+  margin-top: 3cqw;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.6cqw;
+  align-items: start;
+}
+
+.cp-pairslot {
+  min-width: 0;
+  display: flex;
+}
+
+// Deliberate mis-alignment: the second plane drops below the first.
+.cp-pairslot--down {
+  padding-top: 4.6cqw;
+}
+
+.cp-pairslot .cp-plane {
+  flex: 1 1 auto;
+}
+
+.cp-pairslot .cp-plane__face {
+  gap: 1.4cqw;
+  padding: 2.4cqw 2.6cqw 2.8cqw;
+}
+
+.cp-pairtextline {
+  margin: 0;
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+// --------------------------------------------------------------- definition
+
+.cp-stage--definition {
+  justify-content: center;
+  gap: 2.6cqw;
+}
+
+.cp-termplane {
+  flex: none;
+  align-self: flex-start;
+  max-width: 82%;
+
+  .cp-plane__face {
+    gap: 1.2cqw;
+    padding: 2.6cqw 3.4cqw 3cqw 2.8cqw;
+    align-items: flex-start;
+  }
+}
+
+.cp-termtext {
+  line-height: 1;
+}
+
+.cp-meaning {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+// The example is hung off the right edge, below the term plane's diagonal.
+.cp-exampleplane {
+  flex: none;
+  align-self: flex-end;
+  max-width: 62%;
+
+  .cp-plane__face {
+    gap: 0.9cqw;
+    padding: 1.8cqw 2.4cqw 2cqw;
+  }
+}
+
+.cp-exampletext {
+  margin: 0;
+  line-height: 1.3;
+}
