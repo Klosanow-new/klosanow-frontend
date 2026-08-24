@@ -23,15 +23,16 @@ import { BsSendFill } from "react-icons/bs";
 import useChatWebSocket from "src/hooks/useChatWebSocket";
 import { ChatListData, ChatType } from "src/types";
 import {
+  buildMediaFileName,
   deletedFile,
   FileUploadResponseStatus,
+  renameForUpload,
   uploadFile,
 } from "src/utils/file-upload";
 import { clearFileUrl, setFileUrl } from "src/utils/constant";
 import RecorderLoader from "../RecorderLoader";
 
 import styles from "./styles.module.scss";
-import { uniqueId } from "lodash";
 import { removeStorageItem } from "src/utils/generics";
 import { CHAT_CONTACT_KEY } from "src/data/constants";
 
@@ -124,7 +125,10 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
       handleStateUpdate({ uploadingMedia: true });
       const file = e.currentTarget.files[0];
 
-      const res = await uploadFile(file);
+      // Upload under a unique key. Two users sending their own IMG_0001.jpg used
+      // to write to the same object, and whoever uploaded second silently
+      // replaced the first one's picture in a chat that had already been read.
+      const res = await uploadFile(renameForUpload(file));
 
       if (!res || !res.data || res.status !== FileUploadResponseStatus.Success)
         throw new Error("Unable to fetch data");
@@ -158,12 +162,16 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   const handleAudioUpload = async (blob: Blob) => {
     try {
       handleStateUpdate({ uploadingMedia: true });
+
+      // useAudioRecorder is created without mediaRecorderOptions, so the browser
+      // picks the format: webm/opus on Chrome and Firefox, mp4 on Safari. The old
+      // hardcoded "audio/mp3" described none of them, which stored the object
+      // under a Content-Type that did not match its bytes.
+      const mimeType = blob.type || "audio/webm";
       const file = new File(
         [blob],
-        `${activeChat.username}-${uniqueId("audio")}`,
-        {
-          type: "audio/mp3",
-        }
+        buildMediaFileName("audio", activeChat.username || "voice-note", mimeType),
+        { type: mimeType },
       );
       const res = await uploadFile(file);
 

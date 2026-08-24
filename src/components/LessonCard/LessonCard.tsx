@@ -16,6 +16,7 @@ import { OptionWhiteIcon } from "../../assets/svgs";
 import { copyText } from "src/pages/StudyChat/utils";
 import { shareableLessonUrl } from "src/data/pageUrl";
 import thumbnailPlaceholder from "src/assets/images/thumb.jpg";
+import { formatDuration } from "src/utils/video";
 
 interface LessonCardProps {
   lesson: Lesson;
@@ -55,21 +56,13 @@ const LessonCard: React.FC<LessonCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.duration === Infinity) return;
+    // Recorded WebM reports Infinity until the file is read to the end. The
+    // player forces that resolve, but a card sits in a grid of a dozen others —
+    // doing it here would pull every lesson video down to draw a label. H.264
+    // recordings carry a real duration, so those get a label for free.
+    if (!Number.isFinite(video.duration)) return;
 
-    const vidDurArr = video.duration.toString().split(".");
-
-    const vidHr = vidDurArr[vidDurArr.length - 4];
-    const vidMin = vidDurArr[vidDurArr.length - 3];
-    const vidSec = vidDurArr[vidDurArr.length - 2];
-
-    const vidHrValue = vidHr ? `${vidHr}:` : "";
-    const vidMinValue = vidMin ? `${vidMin}:` : "";
-    const vidSecValue = vidSec ? `${vidSec}:` : "";
-
-    const vidDur = `${vidHrValue}${vidMinValue}:${vidSecValue}`;
-
-    setDuration(vidDur);
+    setDuration(formatDuration(video.duration));
   };
 
   const cardWidth = {
@@ -115,6 +108,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
           src={videoUrl}
           ref={videoRef}
           hidden
+          preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
         />
 

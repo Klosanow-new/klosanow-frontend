@@ -16,6 +16,7 @@ import {
   ACCEPTED_DOCUMENT_TYPES,
   MAX_DOCUMENT_MB,
   generateSlidesFromDocument,
+  warmSlidesService,
 } from "src/api-endpoints/lessons";
 
 interface DocumentUploadProps {
@@ -58,6 +59,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [elapsed, setElapsed] = React.useState(0);
   const [uploadPercent, setUploadPercent] = React.useState(0);
   const [warnings, setWarnings] = React.useState<string[]>([]);
+
+  // The slides service sleeps after 15 minutes idle and takes ~1 min to wake.
+  // Waking it now hides that behind the time spent picking a document.
+  React.useEffect(() => {
+    warmSlidesService();
+  }, []);
 
   React.useEffect(() => {
     if (!loading) return;

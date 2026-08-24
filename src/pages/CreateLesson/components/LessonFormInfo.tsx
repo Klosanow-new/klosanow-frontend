@@ -24,6 +24,7 @@ import { draftsPagePath } from "src/data/pageUrl";
 import {
   deletedFile,
   FileUploadResponseStatus,
+  renameForUpload,
   uploadFile,
 } from "src/utils/file-upload";
 
@@ -76,7 +77,10 @@ const LessonFormInfo: React.FC = () => {
       if (!e.currentTarget.files) return;
 
       const file = e.currentTarget.files[0];
-      const res = await uploadFile(file);
+      // A unique key per upload. Two lessons whose thumbnails were both called
+      // "cover.png" shared one object, so deleting either lesson's thumbnail
+      // broke the other lesson's card.
+      const res = await uploadFile(renameForUpload(file, "thumb"));
 
       if (!res || !res.data || res.status !== FileUploadResponseStatus.Success)
         throw new Error("Unable to fetch data");

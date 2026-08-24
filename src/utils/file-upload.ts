@@ -35,6 +35,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "video/x-matroska": "mkv",
   "audio/webm": "webm",
   "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
   "audio/mp4": "m4a",
   "audio/wav": "wav",
   "audio/x-wav": "wav",
@@ -47,6 +48,36 @@ const MIME_EXTENSIONS: Record<string, string> = {
 
 export const extensionForMimeType = (mimeType: string) =>
   MIME_EXTENSIONS[baseMimeType(mimeType)] ?? "";
+
+/**
+ * Last resort for a type the map doesn't cover (image/svg+xml, video/x-msvideo):
+ * keep whatever extension the original file already carried, so the object at
+ * least keeps a recognisable Content-Type.
+ */
+export const extensionFromName = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  if (dot < 0) return "";
+
+  const extension = name.slice(dot + 1).toLowerCase();
+
+  return /^[a-z0-9]{2,5}$/.test(extension) ? extension : "";
+};
+
+/**
+ * The prefix is not decoration — study chat has nothing but the url to work out
+ * how to render an attachment, and `webm` alone cannot distinguish a screen
+ * recording from a voice note. Keep these in step with `legacyTypeFromName`
+ * in src/pages/StudyChat/utils.tsx.
+ */
+export const prefixForMimeType = (mimeType: string) => {
+  const category = baseMimeType(mimeType).split("/")[0];
+
+  if (category === "video") return "vid";
+  if (category === "audio") return "audio";
+  if (category === "image") return "img";
+
+  return "file";
+};
 
 /**
  * Upload names have to survive three hops the raw lesson title does not.
@@ -66,6 +97,8 @@ export const buildMediaFileName = (
   prefix: string,
   label: string,
   mimeType: string,
+  /** Original filename, used only to recover an extension the map lacks. */
+  fallbackName?: string,
 ) => {
   const slug = label
     .toLowerCase()
@@ -73,7 +106,9 @@ export const buildMediaFileName = (
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 
-  const extension = extensionForMimeType(mimeType);
+  const extension =
+    extensionForMimeType(mimeType) ||
+    (fallbackName ? extensionFromName(fallbackName) : "");
   const stamp = `${Date.now().toString(36)}${Math.random()
     .toString(36)
     .slice(2, 6)}`;
@@ -81,6 +116,26 @@ export const buildMediaFileName = (
   return `${prefix}-${slug || "untitled"}-${stamp}${
     extension ? `.${extension}` : ""
   }`;
+};
+
+/**
+ * Re-wraps a picked file under a collision-proof name. The bytes and type are
+ * untouched; only the storage key changes. Callers keep `file.name` for display.
+ */
+export const renameForUpload = (file: File, prefix?: string) => {
+  const dot = file.name.lastIndexOf(".");
+  const label = dot > 0 ? file.name.slice(0, dot) : file.name;
+
+  return new File(
+    [file],
+    buildMediaFileName(
+      prefix ?? prefixForMimeType(file.type),
+      label,
+      file.type,
+      file.name,
+    ),
+    { type: file.type },
+  );
 };
 
 export const validateFile = (file: File) => {

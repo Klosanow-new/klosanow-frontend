@@ -28,6 +28,7 @@ import { clearFileUrl, setFileUrl } from "src/utils/constant";
 import {
   deletedFile,
   FileUploadResponseStatus,
+  renameForUpload,
   uploadFile,
 } from "src/utils/file-upload";
 import { createStudyChat } from "src/api-endpoints/studyChat";
@@ -96,7 +97,8 @@ const StudyGroupInfo: React.FC = () => {
       if (!e.currentTarget.files) return;
 
       const file = e.currentTarget.files[0];
-      const res = await uploadFile(file);
+      // Unique key per upload; `imageName` below still shows the picked name.
+      const res = await uploadFile(renameForUpload(file, "img"));
 
       if (!res || !res.data || res.status !== FileUploadResponseStatus.Success)
         throw new Error("Unable to fetch data");

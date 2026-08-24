@@ -10,11 +10,11 @@ import {
   PopoverTrigger,
   Text,
 } from "@chakra-ui/react";
-import { OptionIcon } from "../../assets/svgs";
+import { BackButtonIcon, OptionIcon } from "../../assets/svgs";
 import { ChatListData, ChatType } from "../../../../types/studyChat";
 import { uniqueId } from "lodash";
 import { StudyChatContext } from "../../context/StudyChat";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import useChatWebSocket from "src/hooks/useChatWebSocket";
 import { removeStorageItem } from "src/utils/generics";
 import { CHAT_CONTACT_KEY } from "src/data/constants";
@@ -27,11 +27,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ data }) => {
   const { updateStudyChatValues } = React.useContext(StudyChatContext);
   const { deleteChat, deleteStudyChat } = useChatWebSocket();
   const [_, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const user = useStoreSelector((state) => state.user);
 
   const handleClose = () => {
-    setSearchParams("");
-    updateStudyChatValues({ activeChat: null });
+    setSearchParams("", { replace: true });
+    updateStudyChatValues({ activeChat: null, isChatDetailFlyout: false });
+  };
+
+  // Opening a chat from the list pushes a history entry, so stepping back is the
+  // honest way out and matches what the hardware back button does. A chat
+  // reached by deep link (invite, shared URL) has nothing behind it to pop.
+  const handleBack = () => {
+    if (location.key === "default") handleClose();
+    else navigate(-1);
   };
 
   const handleDeleteChat = () => {
@@ -59,8 +69,22 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ data }) => {
         justifyContent="space-between"
         p="0 16px"
       >
-        <Flex gap="12px" align="center">
-          <Circle size="50px" overflow="hidden" bg="#808080">
+        <Flex gap={["8px", "12px"]} align="center" minW={0}>
+          <IconButton
+            aria-label="Back to chats"
+            icon={<BackButtonIcon />}
+            onClick={handleBack}
+            bg="transparent"
+            minW="auto"
+            h="auto"
+            p="0"
+            flexShrink={0}
+            transition="transform 0.15s ease"
+            _hover={{ bg: "transparent", transform: "translateX(-2px)" }}
+            _active={{ bg: "transparent" }}
+          />
+
+          <Circle size="50px" overflow="hidden" bg="#808080" flexShrink={0}>
             <Image
               src={data?.img || "https://picsum.photos/50/50"}
               alt={data?.slug}
@@ -70,7 +94,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ data }) => {
           <Box
             w="100%"
             minW={{
-              base: "200px",
+              base: "0",
               xl: "442px",
             }}
             maxW={{
@@ -80,6 +104,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ data }) => {
               xl: "442px",
             }}
             overflowX="hidden"
+            cursor="pointer"
             onClick={() =>
               updateStudyChatValues({
                 isChatDetailFlyout: true,

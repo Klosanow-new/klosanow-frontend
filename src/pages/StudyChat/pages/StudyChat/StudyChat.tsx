@@ -71,7 +71,21 @@ const StudyChat: React.FC = () => {
     return newChat;
   }, [chatList, studyChatList, slug]);
 
-  const chat = state.activeChat || matchedChat;
+  // The `?slug=` param is the single source of truth for which chat is open, so
+  // the browser/hardware back button closes it. `activeChat` is only a cache
+  // that paints the panel before the chat list refetch resolves — it wins when
+  // it matches the URL, and covers slugs the list can't resolve yet (invites).
+  const chat = React.useMemo(() => {
+    if (!slug) return null;
+    if (state.activeChat?.slug === slug) return state.activeChat;
+    return matchedChat || state.activeChat;
+  }, [slug, state.activeChat, matchedChat]);
+
+  // Leaving the chat also tears down the panels that hang off it.
+  React.useEffect(() => {
+    if (!slug && (state.activeChat || state.isChatDetailFlyout))
+      handleStateUpdate({ activeChat: null, isChatDetailFlyout: false });
+  }, [slug, state.activeChat, state.isChatDetailFlyout]);
 
   const handleFetchChats = React.useCallback(async () => {
     try {

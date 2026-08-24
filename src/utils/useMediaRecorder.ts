@@ -2,6 +2,13 @@ import React from "react";
 
 import RecordRTC, { RecordRTCPromisesHandler } from "recordrtc";
 
+import { pickRecordingMimeType } from "./video";
+
+/** 400 kbps — chosen for slide readability on a constrained connection. */
+const VIDEO_BITS_PER_SECOND = 400000;
+/** 64 kbps — enough for clear speech. */
+const AUDIO_BITS_PER_SECOND = 64000;
+
 interface MediaRecorderState {
   blob: Blob | null;
   status: RecordRTC.State;
@@ -46,12 +53,31 @@ const useMediaRecorder = () => {
       ...audioStream.getTracks(),
     ]);
 
-    recorderRef.current = new RecordRTCPromisesHandler(stream, {
+    // Ask for the best container this browser can record rather than the VP8
+    // WebM that was hardcoded here, which iPhone Safari cannot decode. An
+    // unsupported mimeType is not a risk: RecordRTC re-checks it against
+    // isTypeSupported and falls back to video/webm, and the browser picks for
+    // itself when the probe returns nothing.
+    //
+    // recorderType is pinned because mimeType and both bitrates are
+    // MediaRecorder options — RecordRTC's other backends (WhammyRecorder,
+    // WebAssemblyRecorder) accept and silently discard all three. Its own
+    // backend selection reaches MediaStreamRecorder via a hardcoded
+    // isTypeSupported("video/webm") test, which is false on Safari.
+    //
+    // The cast covers two gaps in @types/recordrtc: mimeType is typed as a
+    // closed union with no codec-qualified MP4 entries, and recorderType is
+    // typed as a recorder instance rather than a constructor.
+    const mimeType = pickRecordingMimeType();
+    const options = {
       type: "video",
-      mimeType: "video/webm;codecs=vp8",
-      videoBitsPerSecond: 400000, // 400 kbps (optimized for slides readability, lower size)
-      audioBitsPerSecond: 64000,  // 64 kbps (optimized for clear speech)
-    });
+      recorderType: RecordRTC.MediaStreamRecorder,
+      videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+      audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      ...(mimeType ? { mimeType } : {}),
+    } as unknown as RecordRTC.Options;
+
+    recorderRef.current = new RecordRTCPromisesHandler(stream, options);
 
     await recorderRef.current.startRecording();
     const status = await recorderRef.current.getState();

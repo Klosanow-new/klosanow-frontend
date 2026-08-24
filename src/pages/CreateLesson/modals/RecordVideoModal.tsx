@@ -186,10 +186,12 @@ const RecordVideoModal: React.FC<RecordVideoModalProps> = ({
     try {
       // The stored object's Content-Type is derived from this name, and the
       // resulting url is what gets shared, so it needs an extension and no
-      // spaces. blob.type is "video/webm;codecs=vp8"; the codec parameter is
-      // dropped so the served Content-Type stays a plain, well-understood type.
-      // An untyped blob would fail validateFile, so fall back to what the
-      // recorder is configured to produce.
+      // spaces. blob.type is whatever the recorder actually negotiated —
+      // "video/mp4;codecs=..." where the browser can encode H.264, otherwise
+      // "video/webm;codecs=vp8" — so the extension follows the real container.
+      // The codec parameter is dropped so the served Content-Type stays a plain,
+      // well-understood type. An untyped blob would fail validateFile, so fall
+      // back to the format that is always in the recorder's candidate list.
       const type = baseMimeType(blob.type || "video/webm");
       const file = new File(
         [blob],

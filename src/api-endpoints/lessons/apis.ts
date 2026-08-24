@@ -8,32 +8,29 @@ import { GenerateSlidesResponse } from "./interface";
 export const ACCEPTED_DOCUMENT_TYPES = ".pdf,.docx,.pptx";
 export const MAX_DOCUMENT_MB = 25;
 
-/**
- * Slide generation runs as its own service (klosanow-slides-api on Render)
- * until the backend team merges it into the main API.
- *
- * Hardcoded so deploying needs no change to the Vercel environment. This
- * deliberately ignores VITE_SLIDES_API_URL — the local .env still points at
- * localhost:4000, and honouring it meant the app kept calling a dev server that
- * is not running. To develop against a local API, edit this constant.
- *
- * Once the endpoint is merged into the main API, delete this and use
- * VITE_APP_BASE_URL_MVP instead.
- */
 const SLIDES_API_BASE = "https://klosanowslides.onrender.com";
 
 const slidesApiBase = () => SLIDES_API_BASE;
 
+export const warmSlidesService = () => {
+  void fetch(`${slidesApiBase()}/health`, {
+    method: "GET",
+    // No credentials, no auth — /health is public and this is only a wake-up.
+    cache: "no-store",
+  }).catch(() => undefined);
+};
+
 export const generateSlidesFromDocument = async (
   file: File,
   options?: { slideCount?: number; subject?: string; gradeLevel?: string },
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
 ): Promise<GenerateSlidesResponse> => {
   const token = getToken();
   const form = new FormData();
   form.append("document", file);
 
-  if (options?.slideCount) form.append("slideCount", String(options.slideCount));
+  if (options?.slideCount)
+    form.append("slideCount", String(options.slideCount));
   if (options?.subject) form.append("subject", options.subject);
   if (options?.gradeLevel) form.append("gradeLevel", options.gradeLevel);
 
@@ -51,7 +48,7 @@ export const generateSlidesFromDocument = async (
         if (event.total && onProgress)
           onProgress(Math.round((event.loaded * 100) / event.total));
       },
-    }
+    },
   );
 
   return data as GenerateSlidesResponse;
@@ -67,11 +64,6 @@ export const getLessons = async () => {
   return data;
 };
 
-/**
- * Fetches one lesson. Backs the shared-lesson viewer, where the visitor is a
- * signed-in user who does not own the lesson and so cannot resolve it from
- * getLessons (that returns only the caller's own lessons).
- */
 export const getLesson = async (id: string) => {
   const token = getToken();
   const { data } = await Axios.get(`${lessonRoute}/${id}`, {

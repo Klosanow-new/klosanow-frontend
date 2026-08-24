@@ -11,3 +11,4 @@ export { default as NotificationItem } from "./NotificationItem/NotificationItem
 export { default as SettingsItem } from "./SettingsItem/SettingsItem";
 export { default as EmptyState } from "./EmptyState/EmptyState";
 export { default as EnablePushBanner } from "./EnablePushBanner/EnablePushBanner";
+export { default as VideoPlayer } from "./VideoPlayer/VideoPlayer";

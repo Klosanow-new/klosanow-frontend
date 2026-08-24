@@ -5,14 +5,16 @@ import {
   Flex,
   Image,
   Modal,
+  ModalCloseButton,
   ModalContent,
   ModalOverlay,
   Text,
 } from "@chakra-ui/react";
 import { ChatListData, ChatType, MessageType } from "src/types";
-import { getUploadedDataPreview } from "../../utils";
+import { ChatMediaType, getUploadedDataPreview, lessonIdFromUrl } from "../../utils";
 import { useStoreSelector } from "src/redux/hooks";
 import { getContactDisplayName } from "../../utils";
+import { VideoPlayer } from "src/components";
 
 interface ChatBodyProps {
   messages: Array<MessageType>;
@@ -27,7 +29,10 @@ const ChatBody: React.FC<ChatBodyProps> = ({
 }) => {
   const mediaCacheRef = React.useRef<Record<string, JSX.Element | null>>({});
 
-  const [viewImage, setViewImage] = React.useState("");
+  const [viewMedia, setViewMedia] = React.useState<{
+    url: string;
+    type: ChatMediaType;
+  } | null>(null);
   const [, forceUpdate] = React.useState(0);
   const user = useStoreSelector((state) => state.user);
 
@@ -61,10 +66,15 @@ const ChatBody: React.FC<ChatBodyProps> = ({
   const reformatText = (text: string) => {
     const urlRegex = /\b((https?:\/\/|www\.)[^\s/$.?#].[^\s]*)/gi;
 
-    return text.replace(urlRegex, (url) => {
+    const stripped = text.replace(urlRegex, (url) => {
       try {
         const fixedUrl = url.startsWith("www.") ? "https://" + url : url;
         const urlObj = new URL(fixedUrl);
+
+        // A lesson link is rendered as a playable card above this text, so the
+        // url itself is noise. It has no file extension, so without this it
+        // falls past the check below and prints in full.
+        if (lessonIdFromUrl(fixedUrl)) return "";
 
         const pathname = urlObj.pathname;
         const filename = pathname.substring(pathname.lastIndexOf("/") + 1);
@@ -78,6 +88,10 @@ const ChatBody: React.FC<ChatBodyProps> = ({
         return url;
       }
     });
+
+    // Removing a url can leave the gap it sat in, or nothing but whitespace when
+    // the message was only a link.
+    return stripped.replace(/[ \t]{2,}/g, " ").trim();
   };
 
   const reversedMessages = React.useMemo(() => {
@@ -99,7 +113,7 @@ const ChatBody: React.FC<ChatBodyProps> = ({
           const preview =
             getUploadedDataPreview({
               url,
-              handleView: () => setViewImage(url),
+              handleView: (type) => setViewMedia({ url, type }),
             }) ?? null;
           mediaCacheRef.current[url] = preview;
           updated = true;
@@ -136,6 +150,7 @@ const ChatBody: React.FC<ChatBodyProps> = ({
       {!loading && messages?.length > 0
         ? reversedMessages?.map((item) => {
             const urls = extractURLs(item.text) || [];
+            const visibleText = reformatText(item.text);
             const isSender = senderId !== item.sender._id;
             const isNewInSession = new Date(item.createdAt).getTime() > sessionStartTimeRef.current;
 
@@ -177,13 +192,20 @@ const ChatBody: React.FC<ChatBodyProps> = ({
                         }
                         return getUploadedDataPreview({
                           url,
-                          handleView: () => setViewImage(url),
+                          handleView: (type) => setViewMedia({ url, type }),
                         });
                       })}
 
-                      <Text wordBreak={"break-word"} fontSize="14px">
-                        {reformatText(item.text)}
-                      </Text>
+                      {/*
+                        A message that was nothing but a lesson link has no text
+                        left once the link is stripped — render no bubble line at
+                        all rather than an empty one under the card.
+                      */}
+                      {visibleText && (
+                        <Text wordBreak={"break-word"} fontSize="14px">
+                          {visibleText}
+                        </Text>
+                      )}
 
                       {isSender && activeChat.type === ChatType.Group && (
                         <Text fontSize="9px">
@@ -208,18 +230,29 @@ const ChatBody: React.FC<ChatBodyProps> = ({
           })
         : undefined}
 
-      <Modal isOpen={!!viewImage} onClose={() => setViewImage("")}>
+      <Modal
+        isOpen={!!viewMedia}
+        onClose={() => setViewMedia(null)}
+        size={viewMedia?.type === "video" ? "xl" : "md"}
+        isCentered
+      >
         <ModalOverlay />
         <ModalContent backgroundColor={"#000000c1"} padding={"6px"}>
-          <Image
-            src={viewImage}
-            w="100%"
-            h="100%"
-            maxH="600px"
-            borderRadius="8px"
-            objectFit="contain"
-            opacity="0.85"
-          />
+          <ModalCloseButton color="#fff" zIndex={1} />
+
+          {viewMedia?.type === "video" ? (
+            <VideoPlayer src={viewMedia.url} autoPlay maxHeight="70vh" />
+          ) : (
+            <Image
+              src={viewMedia?.url}
+              w="100%"
+              h="100%"
+              maxH="600px"
+              borderRadius="8px"
+              objectFit="contain"
+              opacity="0.85"
+            />
+          )}
         </ModalContent>
       </Modal>
 

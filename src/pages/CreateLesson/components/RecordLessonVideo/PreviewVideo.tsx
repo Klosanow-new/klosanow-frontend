@@ -9,13 +9,14 @@ import { postLessons } from "src/api-endpoints/lessons";
 import { postUser } from "src/api-endpoints/user/user.api";
 import { deletedFile, FileUploadResponseStatus } from "src/utils/file-upload";
 import OverlayLoader from "src/components/OverlayLoader";
+import { VideoPlayer } from "src/components";
 import { clearFileUrl } from "src/utils/constant";
+import { formatDuration } from "src/utils/video";
 import { encodeContent } from "../../slides/slideCodec";
 
 const PreviewVideo = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   const initialState = {
     duration: "",
@@ -156,47 +157,6 @@ const PreviewVideo = () => {
     }
   };
 
-  const getVideoDurationCallback = React.useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleMetadata = () => {
-      // Remote URLs often return Infinity — force a seek to resolve real duration
-      if (video.duration === Infinity || isNaN(video.duration)) {
-        video.currentTime = 1e101; // seek to a huge number
-      }
-    };
-
-    const handleTimeUpdate = () => {
-      if (video.duration !== Infinity && !isNaN(video.duration)) {
-        const totalSeconds = Math.floor(video.duration);
-        const hrs = Math.floor(totalSeconds / 3600);
-        const mins = Math.floor((totalSeconds % 3600) / 60);
-        const secs = totalSeconds % 60;
-        handleStateUpdate({ duration: `${hrs}hrs:${mins}mins:${secs}secs` });
-
-        // Reset playback position and remove listener once we have the duration
-        video.currentTime = 0;
-        video.removeEventListener("timeupdate", handleTimeUpdate);
-      }
-    };
-
-    video.addEventListener("loadedmetadata", handleMetadata);
-    video.addEventListener("timeupdate", handleTimeUpdate);
-
-    return () => {
-      video.removeEventListener("loadedmetadata", handleMetadata);
-      video.removeEventListener("timeupdate", handleTimeUpdate);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (!videoRef.current) return;
-    const cleanup = getVideoDurationCallback();
-
-    return cleanup;
-  }, [getVideoDurationCallback]);
-
   return (
     <Flex flexDir="column" align="center">
       <OverlayLoader loading={state.loading} description={state.message} />
@@ -208,15 +168,12 @@ const PreviewVideo = () => {
           md: "600px",
         }}
         position="relative"
-        bg="#000"
       >
-        <video
-          width="100%"
-          height="100%"
+        <VideoPlayer
           src={videoUrl}
-          ref={videoRef}
-          style={{ opacity: 0.8, maxHeight: 600 }}
-          controls
+          onDurationResolved={(seconds) =>
+            handleStateUpdate({ duration: formatDuration(seconds) })
+          }
         />
       </Box>
 

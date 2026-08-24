@@ -1,4 +1,4 @@
-import { Box, Flex, Image } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import {
   ChatData,
   ChatListData,
@@ -7,12 +7,15 @@ import {
   GroupedContact,
   StudyChatListData,
 } from "../../types/studyChat";
-import { colors } from "../../data/colors";
-import DummyFileIllustration from "./assets/images/file.png";
 import { DeleteIcon } from "./assets/svgs";
 import { BsFillSendFill } from "react-icons/bs";
-import { groupBy, uniqueId } from "lodash";
+import { groupBy } from "lodash";
 import { formatISO } from "date-fns";
+import { watchLessonPageSlug } from "src/data/pageUrl";
+import ChatMediaPreview, {
+  ChatMediaType,
+} from "./components/ChatMediaPreview/ChatMediaPreview";
+import ChatLessonPreview from "./components/ChatLessonPreview/ChatLessonPreview";
 
 export const getContactsListWithChar = (contacts: Contact[]) => {
   const sortedContacts = [...contacts].sort((a, b) => {
@@ -67,47 +70,136 @@ export const getContactDisplayName = (contact: Contact): string => {
 
   return "";
 };
-const getTypeFromUrl = (
-  value: string,
-  type?: string
-): "video" | "audio" | "image" | "doc" | "other" => {
+const IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+  "avif",
+  "ico",
+  "svg",
+];
+const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm", "ogv", "mov", "mkv"];
+const AUDIO_EXTENSIONS = [
+  "mp3",
+  "wav",
+  "ogg",
+  "oga",
+  "aac",
+  "m4a",
+  "opus",
+  "flac",
+];
+const DOC_EXTENSIONS = ["pdf", "txt", "doc", "docx", "ppt", "pptx"];
+
+/**
+ * Containers that carry either an audio or a video track. A voice note recorded
+ * in Chrome is `audio/webm`, so the extension alone cannot tell it apart from a
+ * screen recording — only the `audio-`/`vid-` prefix can.
+ */
+const AMBIGUOUS_EXTENSIONS = ["webm", "ogg", "mp4", "mkv"];
+
+export type { ChatMediaType };
+
+/**
+ * Matching used to be `extension.includes(format)` over the whole pathname,
+ * which is why a url containing "ico", "png" or "gif" anywhere rendered as an
+ * image, and why a /watch/:id link whose hex id happened to contain "aac" came
+ * out as an <audio> element. Compare the real extension exactly instead.
+ */
+const extensionFromUrl = (pathname: string) => {
+  const segment = pathname.split("/").pop() ?? "";
+  const dot = segment.lastIndexOf(".");
+  if (dot < 0) return "";
+
+  const extension = segment.slice(dot + 1).toLowerCase();
+
+  // A long or punctuated tail is part of a name, not a file extension.
+  return /^[a-z0-9]{2,5}$/.test(extension) ? extension : "";
+};
+
+/**
+ * Uploads made before names carried an extension are only recognisable by the
+ * prefix `buildMediaFileName` still uses today. Without this, every video sent
+ * to a chat before that change would render as a bare link.
+ */
+const legacyTypeFromName = (pathname: string): ChatMediaType => {
+  const segment = (pathname.split("/").pop() ?? "").toLowerCase();
+
+  if (segment.startsWith("vid")) return "video";
+  if (segment.startsWith("audio") || segment.includes("-audio"))
+    return "audio";
+  if (segment.startsWith("thumb") || segment.startsWith("img")) return "image";
+
+  return "other";
+};
+
+/**
+ * Ids are Mongo ObjectIds today, but a length range beats hardcoding 24 hex
+ * characters — the point is to reject a path that merely starts with /watch/.
+ */
+const LESSON_PATH = new RegExp(
+  `^/${watchLessonPageSlug}/([A-Za-z0-9_-]{8,64})/?$`,
+);
+
+/**
+ * The lesson id in one of our own share links, or null for anything else.
+ *
+ * Host-checked on purpose: some other site's /watch/<something> is a link, not
+ * one of our lessons. The cost is that a link pasted across environments (a
+ * production url opened on staging) stays a plain link, which is the right way
+ * for this to fail.
+ */
+export const lessonIdFromUrl = (value: string): string | null => {
   try {
-    const url = new URL(value);
-    const pathname = url.pathname;
-    const parts = pathname.split(".");
+    // "watch this <link>." — the url matcher swallows trailing punctuation, and
+    // none of those characters can appear in an id or matter in the path.
+    const trimmed = value.replace(/[.,;:!?)\]}]+$/, "");
+    const url = new URL(
+      trimmed.startsWith("www.") ? `https://${trimmed}` : trimmed,
+    );
+    const bare = (host: string) => host.replace(/^www\./i, "").toLowerCase();
 
-    let extension = parts[parts.length - 1].toLowerCase();
-    extension = type ? type : extension.split(/[?#]/)[0];
+    if (bare(url.host) !== bare(window.location.host)) return null;
 
-    const imageFormats = [
-      "jpg",
-      "jpeg",
-      "png",
-      "webp",
-      "gif",
-      "avif",
-      "ico",
-      "svg",
-      "image",
-    ];
-    const videoFormats = ["mp4", "webm", "ogv", "vid", "video"];
-    const audioFormats = [
-      "audio",
-      "mp3",
-      "wav",
-      "ogg",
-      "oga",
-      "aac",
-      "m4a",
-      "opus",
-      "flac",
-    ];
-    const docFormats = ["pdf", "txt", "doc", "docx"];
+    return LESSON_PATH.exec(url.pathname)?.[1] ?? null;
+  } catch (e) {
+    return null;
+  }
+};
 
-    if (imageFormats.some((item) => extension.includes(item))) return "image";
-    if (videoFormats.some((item) => extension.includes(item))) return "video";
-    if (audioFormats.some((item) => extension.includes(item))) return "audio";
-    if (docFormats.some((item) => extension.includes(item))) return "doc";
+const getTypeFromUrl = (value: string, type?: string): ChatMediaType => {
+  try {
+    // A known MIME type beats anything the url can tell us.
+    if (type) {
+      const category = type.split("/")[0].toLowerCase();
+      if (category === "video" || type.includes("video")) return "video";
+      if (category === "audio" || type.includes("audio")) return "audio";
+      if (category === "image" || type.includes("image")) return "image";
+      if (category === "application" || category === "text") return "doc";
+    }
+
+    // Our own lesson links carry no file extension, so without this they fall
+    // through every branch below and render as a bare url.
+    if (lessonIdFromUrl(value)) return "lesson";
+
+    const { pathname } = new URL(value);
+    const extension = extensionFromUrl(pathname);
+
+    if (!extension) return legacyTypeFromName(pathname);
+
+    // For a container that holds either track, trust the upload prefix and fall
+    // through to the extension only when there isn't one.
+    if (AMBIGUOUS_EXTENSIONS.includes(extension)) {
+      const hint = legacyTypeFromName(pathname);
+      if (hint === "audio" || hint === "video") return hint;
+    }
+
+    if (IMAGE_EXTENSIONS.includes(extension)) return "image";
+    if (VIDEO_EXTENSIONS.includes(extension)) return "video";
+    if (AUDIO_EXTENSIONS.includes(extension)) return "audio";
+    if (DOC_EXTENSIONS.includes(extension)) return "doc";
 
     return "other";
   } catch (e) {
@@ -118,83 +210,29 @@ const getTypeFromUrl = (
 export const getUploadedDataPreview = (data: {
   url: string;
   mediaType?: string;
-  handleView?: () => void;
+  handleView?: (type: ChatMediaType) => void;
 }) => {
   const { url, mediaType, handleView } = data;
   const type = getTypeFromUrl(url, mediaType);
 
-  if (type === "image") {
-    return (
-      <Box
-        bg="#eee"
-        borderRadius="8px"
-        key={uniqueId(`img-${url}`)}
-        onClick={() => handleView && handleView()}
-      >
-        <Image
-          src={url}
-          w="100%"
-          h="100%"
-          maxH="156px"
-          borderRadius="8px"
-          objectFit="contain"
-          opacity="0.85"
-        />
-      </Box>
-    );
+  if (type === "lesson") {
+    const lessonId = lessonIdFromUrl(url);
+
+    // The card fetches the lesson itself, so it owns its own viewer — there is
+    // no url to hand back to `handleView`, only an id.
+    if (lessonId) {
+      return <ChatLessonPreview key={`lesson-${lessonId}`} lessonId={lessonId} />;
+    }
   }
 
-  if (type === "audio") {
-    return (
-      <div key={uniqueId(`audio-${url}`)} style={{ height: "50px" }}>
-        <audio src={url} style={{ width: "100%", height: "100%" }} controls />
-      </div>
-    );
-  }
-
-  if (type === "video") {
-    return (
-      <video
-        key={uniqueId(`video-${url}`)}
-        src={url}
-        style={{ width: "100%", height: "100%", maxHeight: "156px" }}
-        preload="metadata"
-        controls
-      />
-    );
-  }
-
-  if (type === "doc") {
-    return (
-      <Box
-        bg={colors.neutral[60]}
-        w="70px"
-        borderRadius="8px"
-        key={uniqueId(`doc-${url}`)}
-      >
-        <Image
-          src={DummyFileIllustration}
-          w="100%"
-          h="100%"
-          borderRadius="8px"
-          objectFit="contain"
-        />
-      </Box>
-    );
-  }
-
-  if (type === "other") {
-    return (
-      <a
-        href={url.startsWith("http") ? url : `https://${url}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        key={uniqueId(`link-${url}`)}
-      >
-        <u>{url}</u>
-      </a>
-    );
-  }
+  return (
+    <ChatMediaPreview
+      key={`${type}-${url}`}
+      url={url}
+      type={type}
+      handleView={handleView}
+    />
+  );
 };
 
 export const renderPreveiwAction = (send: () => void, remove?: () => void) => (

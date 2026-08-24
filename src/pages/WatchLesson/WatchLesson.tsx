@@ -1,16 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Button,
-  Flex,
-  Link,
-  Spinner,
-  Text,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-} from "@chakra-ui/react";
+import { Box, Button, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { capitalize } from "lodash";
 
@@ -18,22 +7,8 @@ import { Lesson } from "src/types";
 import { getLesson } from "src/api-endpoints/lessons";
 import { useStoreSelector } from "src/redux/hooks";
 import { dashboardPagePath } from "src/data/pageUrl";
+import { VideoPlayer } from "src/components";
 import thumbnailPlaceholder from "src/assets/images/thumb.jpg";
-
-/**
- * A url with no video extension is a legacy upload — those were stored without
- * one, so the container can only be assumed. Everything this app records is
- * WebM/VP8, so assume that unless the name says otherwise.
- */
-const looksLikeWebm = (url: string) => !/\.(mp4|m4v|mov)(\?|#|$)/i.test(url);
-
-const browserCanPlayWebm = () => {
-  const probe = document.createElement("video");
-  return Boolean(
-    probe.canPlayType('video/webm; codecs="vp8, vorbis"') ||
-      probe.canPlayType("video/webm"),
-  );
-};
 
 const WatchLesson: React.FC = () => {
   const { lessonId } = useParams();
@@ -51,7 +26,6 @@ const WatchLesson: React.FC = () => {
   );
   const [loading, setLoading] = React.useState(!cachedLesson);
   const [error, setError] = React.useState("");
-  const [playbackFailed, setPlaybackFailed] = React.useState(false);
 
   const loadLesson = React.useCallback(async () => {
     if (!lessonId) return;
@@ -89,11 +63,6 @@ const WatchLesson: React.FC = () => {
   }, [lessonId, loadLesson]);
 
   const videoUrl = lesson?.videoUrl || "";
-
-  // Worth saying up front rather than leaving a black player on screen: iOS
-  // Safari cannot decode the VP8 WebM these lessons are recorded in.
-  const codecUnsupported =
-    !!videoUrl && looksLikeWebm(videoUrl) && !browserCanPlayWebm();
 
   if (loading) {
     return (
@@ -142,45 +111,10 @@ const WatchLesson: React.FC = () => {
         {lesson.tutor_name || lesson.user?.name}
       </Text>
 
-      {(codecUnsupported || playbackFailed) && (
-        <Alert status="warning" borderRadius="8px" mb="16px" alignItems="flex-start">
-          <AlertIcon />
-          <Box>
-            <AlertTitle fontSize="14px">
-              This browser can&apos;t play the recording
-            </AlertTitle>
-            <AlertDescription fontSize="14px" display="block">
-              Lessons are recorded as WebM (VP8), which Safari on iPhone and iPad
-              cannot decode. Open the link in Chrome on Android or a computer, or{" "}
-              <Link
-                href={videoUrl}
-                isExternal
-                textDecoration="underline"
-                fontWeight="500"
-              >
-                download the video file
-              </Link>{" "}
-              and play it in an app like VLC.
-            </AlertDescription>
-          </Box>
-        </Alert>
-      )}
-
-      <Box w="100%" bg="#000" borderRadius="8px" overflow="hidden">
-        <video
-          key={videoUrl}
-          width="100%"
-          height="100%"
-          src={videoUrl}
-          poster={lesson.thumbnailUrl || thumbnailPlaceholder}
-          preload="metadata"
-          controls
-          // Without playsInline, iOS hijacks playback into fullscreen.
-          playsInline
-          onError={() => setPlaybackFailed(true)}
-          style={{ display: "block", maxHeight: 600, width: "100%" }}
-        />
-      </Box>
+      <VideoPlayer
+        src={videoUrl}
+        poster={lesson.thumbnailUrl || thumbnailPlaceholder}
+      />
 
       {lesson.about && (
         <Text fontSize="14px" mt="16px" color="black.30" whiteSpace="pre-wrap">

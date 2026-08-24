@@ -11,6 +11,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { Lesson } from "src/types";
+import { VideoPlayer } from "src/components";
 
 interface WatchLessonModalProps {
   show: boolean;
@@ -35,19 +36,12 @@ const WatchLessonModal: React.FC<WatchLessonModalProps> = ({
         <ModalHeader>{lesson?.title}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Box w="100%" h="max-content" bg="#000">
+          <Box w="100%" h="max-content">
             {lesson?.videoUrl && (
-              <video
-                width="100%"
-                height="100%"
+              <VideoPlayer
                 src={lesson.videoUrl}
                 poster={lesson.thumbnailUrl}
-                preload="metadata"
-                style={{ opacity: "0.9" }}
-                controls
-                // Without this, iOS hijacks playback into fullscreen.
-                playsInline
-              ></video>
+              />
             )}
           </Box>
         </ModalBody>
