@@ -29,10 +29,12 @@ const Counter: React.FC<{ value: string | undefined; max: number }> = ({
     <Text
       fontSize="11px"
       color={over ? colors.error[50] : "black.20"}
+      fontWeight={over ? "600" : "400"}
       textAlign="right"
+      mt="2px"
     >
       {length}/{max}
-      {over ? " — will be cut off" : ""}
+      {over ? " — text may clip" : ""}
     </Text>
   );
 };
@@ -45,10 +47,27 @@ const label = {
 };
 
 const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
-  const slots = LAYOUT_SLOTS[slide.layout];
+  const slots = LAYOUT_SLOTS[slide.layout] ?? {
+    subtitle: true,
+    body: true,
+    emphasis: false,
+    visual: false,
+  };
   const body = slide.body ?? [];
 
   const patch = (partial: Partial<Slide>) => onChange({ ...slide, ...partial });
+
+  const handleLayoutChange = (newLayout: SlideLayout) => {
+    const newSlots = LAYOUT_SLOTS[newLayout];
+    const newSlide: Slide = {
+      ...slide,
+      layout: newLayout,
+    };
+    if (newSlots?.body && (!newSlide.body || newSlide.body.length === 0)) {
+      newSlide.body = [""];
+    }
+    onChange(newSlide);
+  };
 
   const setBodyItem = (index: number, value: string) =>
     patch({ body: body.map((item, i) => (i === index ? value : item)) });
@@ -56,19 +75,23 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
   return (
     <Box
       w="100%"
-      h="616px"
+      maxH="calc(100vh - 240px)"
+      minH="480px"
       overflowY="auto"
       className="hide-scroll"
       border={`1px solid ${colors.primary[5]}`}
-      borderRadius="8px"
-      p="16px"
+      borderRadius="12px"
+      p="18px"
+      bg="white"
+      boxShadow="sm"
     >
-      <Box mb="14px">
-        <Text {...label}>Layout</Text>
+      <Box mb="16px">
+        <Text {...label}>Slide Layout</Text>
         <Select
           size="sm"
+          borderRadius="6px"
           value={slide.layout}
-          onChange={(e) => patch({ layout: e.target.value as SlideLayout })}
+          onChange={(e) => handleLayoutChange(e.target.value as SlideLayout)}
         >
           {LAYOUT_IDS.map((id) => (
             <option key={id} value={id}>
@@ -78,26 +101,34 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
         </Select>
       </Box>
 
-      <Box mb="14px">
+      <Box mb="16px">
         <Text {...label}>
           {slide.layout === "definition" ? "Term" : "Title"}
         </Text>
         <Input
           size="sm"
+          borderRadius="6px"
           value={slide.title}
+          placeholder="Slide title"
           onChange={(e) => patch({ title: e.target.value })}
         />
         <Counter value={slide.title} max={SLIDE_LIMITS.title} />
       </Box>
 
       {slots.subtitle && (
-        <Box mb="14px">
+        <Box mb="16px">
           <Text {...label}>
-            {slide.layout === "definition" ? "Meaning" : "Subtitle or kicker"}
+            {slide.layout === "definition" ? "Meaning / Definition" : "Subtitle / Kicker"}
           </Text>
           <Input
             size="sm"
+            borderRadius="6px"
             value={slide.subtitle ?? ""}
+            placeholder={
+              slide.layout === "definition"
+                ? "What does this term mean?"
+                : "Supporting statement or chapter context"
+            }
             onChange={(e) =>
               patch({ subtitle: e.target.value || undefined })
             }
@@ -107,12 +138,14 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
       )}
 
       {slots.emphasis && (
-        <Box mb="14px">
-          <Text {...label}>Big number or word</Text>
+        <Box mb="16px">
+          <Text {...label}>Callout / Big Number</Text>
           <Input
             size="sm"
-            maxW="140px"
+            borderRadius="6px"
+            maxW="180px"
             value={slide.emphasis ?? ""}
+            placeholder="e.g. 98% or STEP 1"
             onChange={(e) =>
               patch({ emphasis: e.target.value || undefined })
             }
@@ -122,22 +155,23 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
       )}
 
       {slots.body && (
-        <Box mb="14px">
-          <Flex align="center" justify="space-between" mb="4px">
+        <Box mb="16px">
+          <Flex align="center" justify="space-between" mb="6px">
             <Text {...label} mb="0">
               {slide.layout === "steps"
-                ? "Steps, in order"
+                ? "Steps (in sequence)"
                 : slide.layout === "compare"
-                  ? "The two things to compare"
+                  ? "Items to compare (2 items)"
                   : slide.layout === "definition"
                     ? "Example"
-                    : "Points"}
+                    : "Bullet Points"}
             </Text>
             {body.length < SLIDE_LIMITS.bodyMax && (
               <IconButton
                 aria-label="add point"
                 size="xs"
                 variant="ghost"
+                colorScheme="purple"
                 icon={<MdAdd />}
                 onClick={() => patch({ body: [...body, ""] })}
               />
@@ -145,22 +179,24 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
           </Flex>
 
           {body.map((item, index) => (
-            <Box key={`body-${index}`} mb="8px">
-              <Flex gap="6px" align="flex-start">
+            <Box key={`body-${index}`} mb="10px">
+              <Flex gap="6px" align="center">
                 <Input
                   size="sm"
+                  borderRadius="6px"
                   value={item}
                   placeholder={
                     slide.layout === "compare" || slide.layout === "steps"
-                      ? "Label: the detail"
-                      : "A short point"
+                      ? `Item ${index + 1}: Key detail`
+                      : `Point ${index + 1}`
                   }
                   onChange={(e) => setBodyItem(index, e.target.value)}
                 />
                 <IconButton
                   aria-label="remove point"
-                  size="sm"
+                  size="xs"
                   variant="ghost"
+                  colorScheme="red"
                   icon={<MdClose />}
                   onClick={() =>
                     patch({ body: body.filter((_, i) => i !== index) })
@@ -172,20 +208,31 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
           ))}
 
           {body.length === 0 && (
-            <Text fontSize="12px" color="black.20">
-              No points yet — use + to add one.
-            </Text>
+            <Flex
+              align="center"
+              justify="center"
+              p="12px"
+              border={`1px dashed ${colors.primary[5]}`}
+              borderRadius="6px"
+              cursor="pointer"
+              onClick={() => patch({ body: [""] })}
+            >
+              <Text fontSize="12px" color="black.20">
+                + Click to add your first point
+              </Text>
+            </Flex>
           )}
         </Box>
       )}
 
       <Box>
-        <Text {...label}>What you will say (speaker notes)</Text>
+        <Text {...label}>Speaker Notes (Teleprompter)</Text>
         <Textarea
           size="sm"
+          borderRadius="6px"
           rows={5}
           value={slide.speakerNotes ?? ""}
-          placeholder="What the tutor says out loud while this slide is showing"
+          placeholder="Talking points and explanation what you will say out loud while presenting this slide"
           onChange={(e) =>
             patch({ speakerNotes: e.target.value || undefined })
           }

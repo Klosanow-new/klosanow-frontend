@@ -189,11 +189,16 @@ const getTypeFromUrl = (value: string, type?: string): ChatMediaType => {
 
     if (!extension) return legacyTypeFromName(pathname);
 
-    // For a container that holds either track, trust the upload prefix and fall
-    // through to the extension only when there isn't one.
+    // For a container that holds either track, trust the upload prefix, and ask
+    // the browser when there isn't one. Guessing "video" here is what rendered
+    // voice notes as a black box with a play button: storage is free to rewrite
+    // the object key we uploaded, and with the `audio-` prefix gone a webm voice
+    // note is indistinguishable from a screen recording by url alone.
     if (AMBIGUOUS_EXTENSIONS.includes(extension)) {
       const hint = legacyTypeFromName(pathname);
       if (hint === "audio" || hint === "video") return hint;
+
+      return "media";
     }
 
     if (IMAGE_EXTENSIONS.includes(extension)) return "image";

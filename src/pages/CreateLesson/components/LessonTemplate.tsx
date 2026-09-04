@@ -41,7 +41,8 @@ const LessonTemplate: React.FC = () => {
           />
         </Box>
 
-        <LessonTemplateCard
+        {/* Unending Scroll template option - hidden but preserved */}
+        {/* <LessonTemplateCard
           bgColor="secondary.70"
           buttonText="Use template"
           buttonTextColor="secondary.70"
@@ -49,7 +50,7 @@ const LessonTemplate: React.FC = () => {
           cardDesc="Present your lesson in bite size sections for your students"
           cardSrc="https://images.unsplash.com/photo-1667489022797-ab608913feeb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHw5fHx8ZW58MHx8fHw%3D&auto=format&fit=crop&w=800&q=60"
           onClick={() => handleNavigate(LessonTemplateType.Scroll)}
-        />
+        /> */}
       </Box>
     </Box>
   );

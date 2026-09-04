@@ -7,6 +7,9 @@ import DummyFileIllustration from "../../assets/images/file.png";
 /**
  * `lesson` is a link to one of our own lessons rather than an uploaded file, and
  * is rendered by ChatLessonPreview — it never reaches this component.
+ *
+ * `media` is a webm/ogg/mp4/mkv url whose name carries no hint of which track it
+ * holds; this component resolves it to `audio` or `video` from the file itself.
  */
 export type ChatMediaType =
   | "video"
@@ -14,6 +17,7 @@ export type ChatMediaType =
   | "image"
   | "doc"
   | "lesson"
+  | "media"
   | "other";
 
 interface ChatMediaPreviewProps {
@@ -30,6 +34,16 @@ interface ChatMediaPreviewProps {
 export const PREVIEW_MAX_HEIGHT = "156px";
 
 /**
+ * A voice note is far more common in a chat than a webm screen recording, so an
+ * undecided container ends up as audio. Playing a video's soundtrack is a much
+ * milder failure than the silent black rectangle a video element shows for a
+ * file with no video track — and on iOS `loadedmetadata` is the one event we
+ * cannot count on firing for a format Safari would rather not preload.
+ */
+const PROBE_TIMEOUT_MS = 5000;
+const PROBE_FALLBACK = "audio" as const;
+
+/**
  * One chat attachment. Media that fails to load is called out rather than left
  * as a black rectangle — an object deleted or overwritten in storage is exactly
  * what "the video is corrupted" looks like from inside a chat.
@@ -40,6 +54,18 @@ const ChatMediaPreview: React.FC<ChatMediaPreviewProps> = ({
   handleView,
 }) => {
   const [failed, setFailed] = React.useState(false);
+  const [probed, setProbed] = React.useState<"audio" | "video" | null>(null);
+
+  // `media` means the url could not say which track the container holds. Every
+  // other type is already decided by the time it gets here.
+  const resolved = type === "media" ? probed : type;
+
+  React.useEffect(() => {
+    if (type !== "media" || probed) return;
+
+    const timeout = setTimeout(() => setProbed(PROBE_FALLBACK), PROBE_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [type, probed]);
 
   const absoluteUrl = url.startsWith("http") ? url : `https://${url}`;
 
@@ -68,7 +94,32 @@ const ChatMediaPreview: React.FC<ChatMediaPreviewProps> = ({
     );
   }
 
-  if (type === "image") {
+  /**
+   * Metadata alone carries the track list, so a video element with
+   * `preload="metadata"` answers the question without fetching the media: a
+   * file with no video track reports a 0-wide frame. The bytes it does pull are
+   * cached, so the audio or video element that replaces it re-uses them.
+   */
+  if (resolved === null) {
+    return (
+      <Box h="50px" display="flex" alignItems="center">
+        <video
+          src={url}
+          preload="metadata"
+          muted
+          playsInline
+          onLoadedMetadata={(e) =>
+            setProbed(e.currentTarget.videoWidth > 0 ? "video" : "audio")
+          }
+          onError={() => setFailed(true)}
+          style={{ width: "1px", height: "1px", opacity: 0 }}
+        />
+        <Spinner size="sm" color={colors.primary[10]} />
+      </Box>
+    );
+  }
+
+  if (resolved === "image") {
     return (
       <Box
         bg="#eee"
