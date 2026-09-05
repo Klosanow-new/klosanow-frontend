@@ -81,7 +81,12 @@ const MobileSettings = () => {
           </Box>
 
           <Box mt="5" background="neutral.10" borderRadius="10" padding="10px">
-            <SettingsItem imageSrc={wallet} text="Subscription" link="#" />
+            <SettingsItem
+              imageSrc={wallet}
+              text="Subscription"
+              link="#"
+              isDisabled
+            />
             <SettingsItem
               imageSrc={cloud}
               text="Storage"
@@ -98,7 +103,7 @@ const MobileSettings = () => {
             <SettingsItem
               imageSrc={group}
               text="Terms and Condition"
-              link="#"
+              link="https://klosanow.com/terms"
             />
           </Box>
 
