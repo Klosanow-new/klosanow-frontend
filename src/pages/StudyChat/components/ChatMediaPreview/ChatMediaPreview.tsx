@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Flex, Image, Link, Text } from "@chakra-ui/react";
+import { Box, Flex, Image, Link, Spinner, Text } from "@chakra-ui/react";
 import { MdPlayArrow } from "react-icons/md";
 import { colors } from "src/data/colors";
 import DummyFileIllustration from "../../assets/images/file.png";
