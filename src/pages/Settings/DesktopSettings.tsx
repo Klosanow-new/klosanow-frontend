@@ -12,6 +12,7 @@ import SubscriptionModal from "../../components/Modals/SubscriptionModal/Subscri
 import { useState } from "react";
 import SubscriptionPlans from "./components/SubscriptionPlans";
 import NotificationSettings from "../NotificationSettings/NotificationSettings";
+import AccountInfo from "../AccountInfo/AccountInfo";
 
 const DesktopSettings = () => {
   // const { isOpen, onOpen, onClose } = useDisclosure();
@@ -122,7 +123,9 @@ const DesktopSettings = () => {
             </Tab>
           </TabList>
           <TabPanels>
-            <TabPanel>1</TabPanel>
+            <TabPanel>
+              <AccountInfo />
+            </TabPanel>
             <TabPanel>
               <NotificationSettings hideHeader={true} />
             </TabPanel>

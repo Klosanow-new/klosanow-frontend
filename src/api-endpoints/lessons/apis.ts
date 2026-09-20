@@ -2,23 +2,10 @@ import { draftsRoute, lessonRoute } from "../../data/apiUrl";
 import { Draft, CreateLessonFormValues } from "../../types";
 import { AxiosInstance as Axios } from "../../utils/axios";
 import { getToken } from "../../utils/constant";
-import RawAxios from "axios";
 import { GenerateSlidesResponse } from "./interface";
 
 export const ACCEPTED_DOCUMENT_TYPES = ".pdf,.docx,.pptx";
 export const MAX_DOCUMENT_MB = 25;
-
-const SLIDES_API_BASE = "https://klosanowslides.onrender.com";
-
-const slidesApiBase = () => SLIDES_API_BASE;
-
-export const warmSlidesService = () => {
-  void fetch(`${slidesApiBase()}/health`, {
-    method: "GET",
-    // No credentials, no auth — /health is public and this is only a wake-up.
-    cache: "no-store",
-  }).catch(() => undefined);
-};
 
 export const generateSlidesFromDocument = async (
   file: File,
@@ -34,22 +21,21 @@ export const generateSlidesFromDocument = async (
   if (options?.subject) form.append("subject", options.subject);
   if (options?.gradeLevel) form.append("gradeLevel", options.gradeLevel);
 
-  const { data } = await RawAxios.post(
-    `${slidesApiBase()}/${lessonRoute}/generate-slides`,
-    form,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-      // Generation runs a large model; a long document can take minutes.
-      timeout: 8 * 60 * 1000,
-      onUploadProgress: (event) => {
-        if (event.total && onProgress)
-          onProgress(Math.round((event.loaded * 100) / event.total));
-      },
+  const { data } = await Axios.post(`${lessonRoute}/generate-slides`, form, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Set explicitly: the shared instance defaults to application/json, and
+      // axios v1 quietly JSON-stringifies FormData when that is the content
+      // type. The browser overwrites this with the real multipart boundary.
+      "Content-Type": "multipart/form-data",
     },
-  );
+    // Generation runs a large model; a long document can take minutes.
+    timeout: 8 * 60 * 1000,
+    onUploadProgress: (event) => {
+      if (event.total && onProgress)
+        onProgress(Math.round((event.loaded * 100) / event.total));
+    },
+  });
 
   return data as GenerateSlidesResponse;
 };

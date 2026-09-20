@@ -18,9 +18,10 @@ export const getSingleUser = async (
 
 export const postUser = async (
   values: UpdateUserRequest,
-  userId: string | null
+  userId: string | null,
+  bearerToken?: string | null
 ) => {
-  const token = getToken();
+  const token = bearerToken || getToken();
   const { data } = await Axios.put(`/${userRoute}/${userId}`, values, {
     headers: {
       Authorization: `Bearer ${token}`,

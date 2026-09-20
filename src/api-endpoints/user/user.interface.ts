@@ -1,11 +1,14 @@
 export interface SingleUserI {
   _id: string;
+  name?: string;
   firstName: string;
   lastName: string;
   username: string;
   email: string;
   phoneNumber: string;
   role: string;
+  bio?: string;
+  profilePhoto?: string;
   createdLessons: Array<any>;
   savedLessons: Array<any>;
   notifications: Array<any>;
@@ -21,6 +24,7 @@ export interface SingleUserResponse {
 }
 
 export interface UpdateUserRequest {
-  username: string;
-  bio: string;
+  name?: string;
+  username?: string;
+  bio?: string;
 }
