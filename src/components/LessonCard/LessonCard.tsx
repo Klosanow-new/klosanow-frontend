@@ -27,6 +27,7 @@ interface LessonCardProps {
   descriptionLength?: number;
   hasWatch?: boolean;
   hasDescription?: boolean;
+  deleteLabel?: string;
   width?: "sm" | "lg";
 }
 
@@ -39,6 +40,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
   handleWatch,
   handleDelete,
   handleView,
+  deleteLabel,
   width,
 }) => {
   const toast = useToast();
@@ -47,19 +49,18 @@ const LessonCard: React.FC<LessonCardProps> = ({
     thumbnailUrl,
     title,
     about: description,
-    tutor_name: author,
+    tutor_name,
     videoUrl,
   } = lesson;
+
+  // A lesson saved from chat may only carry the populated author.
+  const author = tutor_name || lesson.user?.name;
   const [duration, setDuration] = React.useState("");
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Recorded WebM reports Infinity until the file is read to the end. The
-    // player forces that resolve, but a card sits in a grid of a dozen others —
-    // doing it here would pull every lesson video down to draw a label. H.264
-    // recordings carry a real duration, so those get a label for free.
     if (!Number.isFinite(video.duration)) return;
 
     setDuration(formatDuration(video.duration));
@@ -167,7 +168,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
                     bg: "red",
                     color: "white",
                   }}>
-                  Delete
+                  {deleteLabel || "Delete"}
                 </Box>
               </PopoverContent>
             </Popover>

@@ -1,4 +1,4 @@
-import { draftsRoute, lessonRoute } from "../../data/apiUrl";
+import { draftsRoute, lessonRoute, savedLessonsRoute } from "../../data/apiUrl";
 import { Draft, CreateLessonFormValues } from "../../types";
 import { AxiosInstance as Axios } from "../../utils/axios";
 import { getToken } from "../../utils/constant";
@@ -73,6 +73,41 @@ export const deleteLesson = async (id: string) => {
 export const postLessons = async (payload: CreateLessonFormValues) => {
   const token = getToken();
   const { data } = await Axios.post(lessonRoute, payload, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return data;
+};
+
+// Lessons shared with the user in study chat, kept on their own list.
+export const getSavedLessons = async () => {
+  const token = getToken();
+  const { data } = await Axios.get(savedLessonsRoute, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return data;
+};
+
+export const saveLesson = async (lessonId: string) => {
+  const token = getToken();
+  const { data } = await Axios.post(
+    savedLessonsRoute,
+    { lessonId },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return data;
+};
+
+export const unsaveLesson = async (lessonId: string) => {
+  const token = getToken();
+  const { data } = await Axios.delete(`${savedLessonsRoute}/${lessonId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

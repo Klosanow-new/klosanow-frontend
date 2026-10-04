@@ -1,5 +1,6 @@
 export const draftsRoute = "drafts";
 export const lessonRoute = "lessons";
+export const savedLessonsRoute = `${lessonRoute}/saved`;
 export const mediaRoute = "media";
 export const userRoute = "users";
 
@@ -20,9 +21,6 @@ export const singleChatWebSocketUrl = `${chatWebSocket}:${singleChatWebSocketSlu
 export const deleteChatWebSocketUrl = `${chatWebSocket}:${deleteChatWebSocketSlug}`;
 export const sendChatWebSocketUrl = `${chatWebSocket}:${sendChatWebSocketSlug}`;
 
-// Emitted by the server to the *recipient's* socket when a message arrives.
-// `send-message` only echoes back to the sender, so this is the only way to
-// know an incoming message landed.
 const newMessageWebSocketSlug = "new-message";
 export const newMessageWebSocketUrl = `${chatWebSocket}:${newMessageWebSocketSlug}`;
 

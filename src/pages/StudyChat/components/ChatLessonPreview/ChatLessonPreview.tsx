@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Box,
+  Button,
   Flex,
   Image,
   Modal,
@@ -9,12 +10,18 @@ import {
   ModalOverlay,
   Skeleton,
   Text,
+  useToast,
 } from "@chakra-ui/react";
-import { MdPlayArrow } from "react-icons/md";
-import { useQuery } from "@tanstack/react-query";
+import { MdBookmark, MdBookmarkBorder, MdPlayArrow } from "react-icons/md";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { capitalize } from "lodash";
 
-import { getLesson } from "src/api-endpoints/lessons";
+import {
+  fetchSavedLessons,
+  getLesson,
+  saveLesson,
+} from "src/api-endpoints/lessons";
+import { useStoreDispatch, useStoreSelector } from "src/redux/hooks";
 import { Lesson } from "src/types";
 import { VideoPlayer } from "src/components";
 import thumbnailPlaceholder from "src/assets/images/thumb.jpg";
@@ -36,7 +43,7 @@ const statusOf = (error: unknown) =>
  * The message text holds the lesson id, not the video url, so a file that gets
  * moved or re-encoded is fixed once in the lesson record instead of staying
  * broken in every old message that ever linked it.
- *
+ 
  * This is a UX component. It is not access control — the video url it plays is
  * public, and hiding it from the page does not change who can reach it.
  */
@@ -58,6 +65,56 @@ const ChatLessonPreview: React.FC<ChatLessonPreviewProps> = ({ lessonId }) => {
   });
 
   const lesson: Lesson | undefined = data?.data;
+
+  const dispatch = useStoreDispatch();
+  const toast = useToast();
+  const savedLessons = useStoreSelector(
+    (state) => state.lessons["savedLessons"]
+  );
+
+  // Same key as the Saved lessons views, so every card in a chat shares one
+  // request and a save made anywhere is seen by all of them.
+  useQuery({
+    queryKey: ["savedLessons"],
+    queryFn: () => dispatch(fetchSavedLessons()),
+  });
+
+  const [justSaved, setJustSaved] = React.useState(false);
+
+  // The saved list is the source of truth; the local flag covers the window
+  // between a successful save and the refetch landing.
+  const isSaved =
+    justSaved || (savedLessons.data || []).some((item) => item._id === lessonId);
+
+  const { mutate: handleSave, isLoading: isSaving } = useMutation(
+    () => saveLesson(lessonId),
+    {
+      onSuccess: () => {
+        setJustSaved(true);
+        dispatch(fetchSavedLessons());
+        toast({
+          title: "Lesson saved",
+          description: "Find it under Saved lessons",
+          duration: 3000,
+          position: "top-right",
+          status: "success",
+        });
+      },
+      onError: (err: unknown) => {
+        const message = (
+          err as { response?: { data?: { message?: string } } }
+        )?.response?.data?.message;
+
+        toast({
+          title: "Could not save lesson",
+          description: message ?? "Try again later",
+          duration: 3000,
+          position: "top-right",
+          status: "error",
+        });
+      },
+    }
+  );
 
   const notice = (message: string, action?: React.ReactNode) => (
     <Box
@@ -140,6 +197,26 @@ const ChatLessonPreview: React.FC<ChatLessonPreviewProps> = ({ lessonId }) => {
             <MdPlayArrow />
           </Flex>
         </Flex>
+
+        <Box position="absolute" top="6px" right="6px" zIndex={1}>
+          <Button
+            size="xs"
+            leftIcon={isSaved ? <MdBookmark /> : <MdBookmarkBorder />}
+            borderRadius="full"
+            bg="blackAlpha.600"
+            color="#fff"
+            _hover={{ bg: "blackAlpha.500" }}
+            isLoading={isSaving}
+            isDisabled={isSaved || isSaving}
+            onClick={(event) => {
+              // The whole card opens the player; saving must not start it.
+              event.stopPropagation();
+              handleSave();
+            }}
+          >
+            {isSaved ? "Saved" : "Save"}
+          </Button>
+        </Box>
 
         <Box
           position="absolute"

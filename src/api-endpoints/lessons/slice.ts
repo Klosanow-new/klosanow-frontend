@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchDrafts, fetchLessons } from "./actions";
+import { fetchDrafts, fetchLessons, fetchSavedLessons } from "./actions";
 import { LessonPayload } from "../../types";
 
 const initialState: LessonPayload = {
@@ -7,6 +7,9 @@ const initialState: LessonPayload = {
     data: [],
   },
   drafts: {
+    data: [],
+  },
+  savedLessons: {
     data: [],
   },
 };
@@ -28,7 +31,12 @@ export const lessonsSlice = createSlice({
       .addCase(fetchDrafts.fulfilled, (state, action) => {
         state.drafts = action.payload;
       })
-      .addCase(fetchDrafts.rejected, (state) => state);
+      .addCase(fetchDrafts.rejected, (state) => state)
+      .addCase(fetchSavedLessons.pending, (state) => state)
+      .addCase(fetchSavedLessons.fulfilled, (state, action) => {
+        state.savedLessons = action.payload;
+      })
+      .addCase(fetchSavedLessons.rejected, (state) => state);
   },
 });
 

@@ -73,4 +73,5 @@ export interface Draft {
 export interface LessonPayload {
   lessons: Payload<Array<Lesson>>;
   drafts: Payload<Array<Draft>>;
+  savedLessons: Payload<Array<Lesson>>;
 }

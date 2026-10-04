@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { getDrafts, getLessons } from ".";
+import { getDrafts, getLessons, getSavedLessons } from ".";
 
 export const fetchLessons = createAsyncThunk(
   "lessons/fetchLessons",
@@ -13,3 +13,11 @@ export const fetchDrafts = createAsyncThunk("lessons/fetchDrafts", async () => {
   const res = await getDrafts();
   return res;
 });
+
+export const fetchSavedLessons = createAsyncThunk(
+  "lessons/fetchSavedLessons",
+  async () => {
+    const res = await getSavedLessons();
+    return res;
+  }
+);

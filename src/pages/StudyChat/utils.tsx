@@ -136,6 +136,25 @@ const legacyTypeFromName = (pathname: string): ChatMediaType => {
 };
 
 /**
+ * Last resort for storage urls the strict pass cannot classify: an extension
+ * with a codec parameter glued to it, a trailing slash after it, or a key from
+ * before names carried one at all. Searches the path for a dotted, known
+ * extension the way chat attachments were matched before strict matching. The
+ * dot keeps a word like "convert-png" inside an ordinary link from being
+ * mistaken for a file — which is what the old undotted matching got wrong.
+ */
+const lenientTypeFromPath = (pathname: string): ChatMediaType => {
+  const path = pathname.toLowerCase();
+
+  if (IMAGE_EXTENSIONS.some((ext) => path.includes(`.${ext}`))) return "image";
+  if (VIDEO_EXTENSIONS.some((ext) => path.includes(`.${ext}`))) return "video";
+  if (AUDIO_EXTENSIONS.some((ext) => path.includes(`.${ext}`))) return "audio";
+  if (DOC_EXTENSIONS.some((ext) => path.includes(`.${ext}`))) return "doc";
+
+  return "other";
+};
+
+/**
  * Ids are Mongo ObjectIds today, but a length range beats hardcoding 24 hex
  * characters — the point is to reject a path that merely starts with /watch/.
  */
@@ -187,7 +206,12 @@ const getTypeFromUrl = (value: string, type?: string): ChatMediaType => {
     const { pathname } = new URL(value);
     const extension = extensionFromUrl(pathname);
 
-    if (!extension) return legacyTypeFromName(pathname);
+    if (!extension) {
+      const legacy = legacyTypeFromName(pathname);
+      // An undotted key is either a prefixed upload (handled above) or one from
+      // before prefixes existed — the dotted search is its last chance.
+      return legacy !== "other" ? legacy : lenientTypeFromPath(pathname);
+    }
 
     // For a container that holds either track, trust the upload prefix, and ask
     // the browser when there isn't one. Guessing "video" here is what rendered
@@ -206,7 +230,7 @@ const getTypeFromUrl = (value: string, type?: string): ChatMediaType => {
     if (AUDIO_EXTENSIONS.includes(extension)) return "audio";
     if (DOC_EXTENSIONS.includes(extension)) return "doc";
 
-    return "other";
+    return lenientTypeFromPath(pathname);
   } catch (e) {
     return "other";
   }

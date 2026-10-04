@@ -5,10 +5,10 @@ import { EmptyState, LessonCard } from "../../components";
 import DashboardHeaderMobile from "./components/DashboardHeaderMobile";
 import LessonTabHeader from "./components/LessonTabHeader";
 import { useQuery } from "@tanstack/react-query";
-import { fetchLessons } from "../../api-endpoints/lessons/actions";
+import { fetchLessons, fetchSavedLessons } from "../../api-endpoints/lessons/actions";
 import { useStoreDispatch, useStoreSelector } from "../../redux/hooks";
 import { Lesson, LessonType } from "src/types";
-import { createLessonPagePath } from "src/data/pageUrl";
+import { createLessonPagePath, studyChatPagePath } from "src/data/pageUrl";
 import { DEVICE_SCREEN_SIZES } from "src/data/constants";
 import { WatchLessonModal } from "../CreateLesson";
 
@@ -27,6 +27,9 @@ const Dashboard: React.FC = () => {
 
   const user = useStoreSelector((state) => state["user"]);
   const lessons = useStoreSelector((state) => state.lessons["lessons"]);
+  const savedLessons = useStoreSelector(
+    (state) => state.lessons["savedLessons"]
+  );
 
   const initialState: DashboardState = {
     lessonType: LessonType.Created,
@@ -41,10 +44,11 @@ const Dashboard: React.FC = () => {
     setState((state) => ({ ...state, ...newState }));
 
   const createdLesson = lessons.data || [];
+  const savedLesson = savedLessons.data || [];
 
   const lessonData = {
     [LessonType.Created]: [...createdLesson].reverse(),
-    [LessonType.Saved]: [],
+    [LessonType.Saved]: [...savedLesson].reverse(),
   }[state.lessonType].slice(0, 5);
 
   const latestLessonArr = [...createdLesson].reverse();
@@ -67,6 +71,11 @@ const Dashboard: React.FC = () => {
   useQuery({
     queryKey: ["lessons"],
     queryFn: () => dispatch(fetchLessons()),
+  });
+
+  useQuery({
+    queryKey: ["savedLessons"],
+    queryFn: () => dispatch(fetchSavedLessons()),
   });
 
   return (
@@ -134,11 +143,20 @@ const Dashboard: React.FC = () => {
 
           <Box>
             {lessonData.length === 0 ? (
-              <EmptyState
-                title="lesson"
-                link={createLessonPagePath}
-                height="sm"
-              />
+              state.lessonType === LessonType.Saved ? (
+                <EmptyState
+                  title="saved lesson"
+                  link={studyChatPagePath}
+                  height="sm"
+                  description="Lessons shared with you in Study Chat will show up here once you save them."
+                />
+              ) : (
+                <EmptyState
+                  title="lesson"
+                  link={createLessonPagePath}
+                  height="sm"
+                />
+              )
             ) : (
               <Flex
                 align="center"

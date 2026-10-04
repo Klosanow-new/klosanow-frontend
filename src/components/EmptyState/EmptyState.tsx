@@ -10,9 +10,15 @@ interface EmptyStateProps {
   title: string;
   link: string;
   height?: "sm" | "lg";
+  description?: React.ReactNode;
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ title, link, height }) => {
+const EmptyState: React.FC<EmptyStateProps> = ({
+  title,
+  link,
+  height,
+  description,
+}) => {
   const flexHeight = {
     sm: "250px",
     lg: "500px",
@@ -49,11 +55,15 @@ const EmptyState: React.FC<EmptyStateProps> = ({ title, link, height }) => {
       </Text>
       {isDesktop && (
         <Text fontSize={"14px"}>
-          Click{" "}
-          <Link to={link}>
-            <u>here</u>
-          </Link>{" "}
-          to start creating lessons
+          {description ?? (
+            <>
+              Click{" "}
+              <Link to={link}>
+                <u>here</u>
+              </Link>{" "}
+              to start creating lessons
+            </>
+          )}
         </Text>
       )}
     </Flex>

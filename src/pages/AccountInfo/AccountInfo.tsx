@@ -1,7 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import {
   Avatar,
-  Badge,
   Box,
   Button,
   Flex,
@@ -31,6 +30,8 @@ import { IconType } from "react-icons";
 import { format } from "date-fns";
 import Header from "../../components/Header/Header";
 import { getSingleUser, postUser } from "src/api-endpoints/user/user.api";
+import { fetchLessons, fetchSavedLessons } from "src/api-endpoints/lessons";
+import { useQuery } from "@tanstack/react-query";
 import {
   SingleUserI,
   UpdateUserRequest,
@@ -172,6 +173,19 @@ export default function AccountInfo(): JSX.Element {
   const dispatch = useStoreDispatch();
   const toast = useToast();
   const user = useStoreSelector((state) => state.user.data);
+
+  // The user record does not carry lesson counts, so both stats read the same
+  // lessons endpoints (and react-query cache) as the All/Dashboard views.
+  const lessons = useStoreSelector((state) => state.lessons["lessons"]);
+  const savedLessons = useStoreSelector(
+    (state) => state.lessons["savedLessons"]
+  );
+
+  useQuery({ queryKey: ["lessons"], queryFn: () => dispatch(fetchLessons()) });
+  useQuery({
+    queryKey: ["savedLessons"],
+    queryFn: () => dispatch(fetchSavedLessons()),
+  });
 
   const [details, setDetails] = useState<SingleUserI | null>(null);
   const [draft, setDraft] = useState<AccountDraft>(() => {
@@ -329,12 +343,9 @@ export default function AccountInfo(): JSX.Element {
   const displayName = resolveName(details) || resolveName(user) || "Your account";
   const displayEmail = details?.email || user?.email || "";
   const displayPhoto = details?.profilePhoto || user?.profilePhoto || "";
-  const role = details?.role || user?.role || "";
   const joined = formatJoined(details?.createdAt);
-  const createdCount =
-    details?.createdLessons?.length ?? user?.createdLessons?.length ?? 0;
-  const savedCount =
-    details?.savedLessons?.length ?? user?.savedLessons?.length ?? 0;
+  const createdCount = (lessons.data || []).length;
+  const savedCount = (savedLessons.data || []).length;
   const isBusy = isFetching || isSaving;
 
   return (
@@ -419,20 +430,6 @@ export default function AccountInfo(): JSX.Element {
               >
                 {displayName}
               </Text>
-              {role && (
-                <Badge
-                  bg="primary.5"
-                  color="primary.70"
-                  borderRadius="full"
-                  px="2.5"
-                  py="0.5"
-                  fontSize="xs"
-                  fontWeight="600"
-                  textTransform="capitalize"
-                >
-                  {role}
-                </Badge>
-              )}
             </Flex>
 
             <Flex
