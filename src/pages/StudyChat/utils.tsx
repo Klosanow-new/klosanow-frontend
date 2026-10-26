@@ -16,6 +16,7 @@ import ChatMediaPreview, {
   ChatMediaType,
 } from "./components/ChatMediaPreview/ChatMediaPreview";
 import ChatLessonPreview from "./components/ChatLessonPreview/ChatLessonPreview";
+import { parseReplyMessage } from "./reply";
 
 export const getContactsListWithChar = (contacts: Contact[]) => {
   const sortedContacts = [...contacts].sort((a, b) => {
@@ -236,6 +237,33 @@ const getTypeFromUrl = (value: string, type?: string): ChatMediaType => {
   }
 };
 
+export const getReplyPreviewText = (message: string): string => {
+  const text = parseReplyMessage(message).text.replace(
+    /\b((https?:\/\/|www\.)[^\s/$.?#].[^\s]*)/gi,
+    (url) => {
+      const type = getTypeFromUrl(url.startsWith("www.") ? `https://${url}` : url);
+      switch (type) {
+        case "image":
+          return "Photo";
+        case "video":
+          return "Video";
+        case "audio":
+          return "Voice message";
+        case "doc":
+          return "Document";
+        case "lesson":
+          return "Shared lesson";
+        case "media":
+          return "Media attachment";
+        default:
+          return url;
+      }
+    },
+  ).replace(/\s+/g, " ").trim();
+
+  return text.length > 180 ? `${text.slice(0, 177)}...` : text || "Message";
+};
+
 export const getUploadedDataPreview = (data: {
   url: string;
   mediaType?: string;
@@ -301,7 +329,9 @@ export const getChatListData = (
       last_msg_time:
         item?.lastChatMessage[0]?.createdAt || formatISO(new Date()),
       type: ChatType.Single,
-      last_msg: item?.lastChatMessage[0]?.text.substring(0, 20),
+      last_msg: item?.lastChatMessage[0]?.text
+        ? parseReplyMessage(item.lastChatMessage[0].text).text.substring(0, 20)
+        : undefined,
       last_msg_sender_id: item?.lastChatMessage[0]?.sender?._id,
     };
   });

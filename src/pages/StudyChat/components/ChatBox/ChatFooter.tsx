@@ -35,22 +35,29 @@ import RecorderLoader from "../RecorderLoader";
 import styles from "./styles.module.scss";
 import { removeStorageItem } from "src/utils/generics";
 import { CHAT_CONTACT_KEY } from "src/data/constants";
+import { formatReplyMessage, QuotedReply } from "../../reply";
+import ReplyPreview from "./ReplyPreview";
 
 interface ChatFooterProps {
   activeChat: ChatListData;
   loading: boolean;
   refresh: () => void;
+  reply: QuotedReply | null;
+  onCancelReply: () => void;
 }
 const ChatFooter: React.FC<ChatFooterProps> = ({
   activeChat,
   loading,
   refresh,
+  reply,
+  onCancelReply,
 }) => {
   const toast = useToast();
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const uploadBtnRef = React.useRef<HTMLInputElement>(null);
 
-  const { sendChatMessage, sendStudyChatMessage } = useChatWebSocket();
+  const { sendChatMessage, sendStudyChatMessage, isConnected } =
+    useChatWebSocket();
 
   const {
     isRecording,
@@ -99,10 +106,21 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   };
 
   const handleSend = (message: string) => {
-    handleSendAction(message);
+    if (!message.trim() || loading || state.uploadingMedia || isRecording) return;
+    if (!isConnected) {
+      toast({
+        title: "Chat is reconnecting",
+        description: "Your message is still here. Try sending again once connected.",
+        status: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+    handleSendAction(formatReplyMessage(message, reply));
     clearFileUrl("chat-file");
     clearFileUrl("chat-audio");
     handleStateUpdate(initialState);
+    onCancelReply();
     refresh();
   };
 
@@ -264,13 +282,20 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   }, [loading]);
 
   React.useEffect(() => {
+    if (reply) inputRef.current?.focus({ preventScroll: true });
+  }, [reply]);
+
+  React.useEffect(() => {
     if (!recordingBlob) return;
     handleAudioUpload(recordingBlob);
   }, [recordingBlob]);
 
   return (
     <Flex
-      h="120px"
+      h={reply ? "190px" : "120px"}
+      flexShrink={0}
+      flexDir="column"
+      gap="8px"
       justifyContent="center"
       alignItems="center"
       position="relative"
@@ -279,7 +304,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
         position="absolute"
         minW="100px"
         maxW="320px"
-        bottom="110px"
+        bottom={reply ? "180px" : "110px"}
         left={{
           base: "5px",
           md: "10px",
@@ -320,6 +345,12 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
         )}
       </Box>
 
+      {reply && (
+        <Box w="100%" maxW="552px" px="17px">
+          <ReplyPreview reply={reply} onCancel={onCancelReply} />
+        </Box>
+      )}
+
       <Flex
         bg={colors.primary[5]}
         maxW="552px"
@@ -347,10 +378,18 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
           cursor={isRecording ? "not-allowed" : "pointer"}
         />
 
-        <form className={styles.ChatFooter_form} autoComplete="off">
+        <form
+          className={styles.ChatFooter_form}
+          autoComplete="off"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSend(state.message);
+          }}
+        >
           <InputGroup display="flex">
             <Textarea
               placeholder="Type your message..."
+              aria-label="Message"
               value={state.message}
               onChange={(e: React.FormEvent<HTMLTextAreaElement>) => {
                 const value = e.currentTarget.value;
@@ -396,11 +435,12 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
           />
         )}
 
-        {state.message.length !== 0 ? (
+        {state.message.trim().length !== 0 ? (
           <Circle
             size="40px"
             as="button"
             aria-label="send"
+            disabled={loading || state.uploadingMedia || isRecording}
             bg={colors.primary[10]}
             onClick={() => handleSend(state.message)}
           >

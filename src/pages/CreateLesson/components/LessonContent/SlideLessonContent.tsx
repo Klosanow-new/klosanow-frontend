@@ -42,6 +42,7 @@ import { clearFileUrl } from "src/utils/constant";
 import StylePicker from "../../slides/StylePicker";
 import SlotEditor from "../../slides/SlotEditor";
 import DocumentUpload from "../../slides/DocumentUpload";
+import TeachingReview from "../../slides/TeachingReview";
 import SlideRenderer from "../../slides/SlideRenderer";
 import { encodeContent } from "../../slides/slideCodec";
 import { LAYOUT_LABELS } from "../../slides/limits";
@@ -58,6 +59,7 @@ const Editor = React.lazy(() => import("./Editor"));
 const SlideLessonContent: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const editorRef = React.useRef<HTMLDivElement>(null);
 
   const {
     draft_id,
@@ -78,6 +80,7 @@ const SlideLessonContent: React.FC = () => {
   const [showDocUpload, setShowDocUpload] = React.useState(
     !content || content.length === 0
   );
+  const [generationWarnings, setGenerationWarnings] = React.useState<string[]>([]);
 
   const handleStateUpdate = (newState: Partial<LessonDescriptionState>) =>
     setState((prev) => ({ ...prev, ...newState }));
@@ -90,6 +93,14 @@ const SlideLessonContent: React.FC = () => {
 
   const handleSelect = (index: number) => {
     handleStateUpdate({ activeIndex: index });
+  };
+
+  const handleReviewSelect = (index: number) => {
+    handleSelect(index);
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ block: "start" });
+      editorRef.current?.focus({ preventScroll: true });
+    });
   };
 
   // Live auto-update for structured slides
@@ -220,7 +231,7 @@ const SlideLessonContent: React.FC = () => {
   };
 
   // Handle AI generation completion
-  const handleGenerated = (generated: Slide[]) => {
+  const handleGenerated = (generated: Slide[], warnings: string[]) => {
     const offset = state.content.length;
     const withIds = generated.map((slide, i) => ({
       ...slide,
@@ -234,10 +245,11 @@ const SlideLessonContent: React.FC = () => {
     }));
 
     setShowDocUpload(false); // Collapse upload to focus on editing
+    setGenerationWarnings((previous) => [...new Set([...previous, ...warnings])]);
 
     toast({
       title: `${withIds.length} slides ready for editing`,
-      description: "Review and customize each slide using the live editor.",
+      description: "Check the teaching review, supporting points, and teacher notes before recording.",
       status: "success",
       duration: 5000,
       position: "top-right",
@@ -352,10 +364,17 @@ const SlideLessonContent: React.FC = () => {
             <DocumentUpload
               onGenerated={handleGenerated}
               subject={form_info.title}
+              description={form_info.description}
             />
           </Box>
         </Collapse>
       </Box>
+
+      <TeachingReview
+        slides={state.content}
+        warnings={generationWarnings}
+        onSelect={handleReviewSelect}
+      />
 
       {/* Studio Workspace */}
       {state.content.length === 0 ? (
@@ -582,7 +601,14 @@ const SlideLessonContent: React.FC = () => {
                 flexDir={{ base: "column", xl: "row" }}
               >
                 {/* FIELD EDITOR */}
-                <Box w={{ base: "100%", xl: "48%" }} minW="0">
+                <Box
+                  ref={editorRef}
+                  tabIndex={-1}
+                  role="region"
+                  aria-label={`Editing slide ${state.activeIndex + 1}`}
+                  w={{ base: "100%", xl: "48%" }}
+                  minW="0"
+                >
                   <Flex justify="space-between" align="center" mb="10px">
                     <Text fontSize="16px" fontWeight="600">
                       Editing Slide {state.activeIndex + 1}
@@ -665,7 +691,7 @@ const SlideLessonContent: React.FC = () => {
                         mb="4px"
                         letterSpacing="0.5px"
                       >
-                        SPEAKER PROMPTER NOTES
+                        TEACHER NOTES / NARRATION
                       </Text>
                       <Text fontSize="13px" color="black.40" lineHeight="1.5">
                         {(currentSlide as Slide).speakerNotes}

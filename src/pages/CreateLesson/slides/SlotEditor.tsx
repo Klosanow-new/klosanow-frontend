@@ -226,18 +226,21 @@ const SlotEditor: React.FC<SlotEditorProps> = ({ slide, onChange }) => {
       )}
 
       <Box>
-        <Text {...label}>Speaker Notes (Teleprompter)</Text>
+        <Text {...label}>Teacher Notes / Narration</Text>
         <Textarea
           size="sm"
           borderRadius="6px"
           rows={5}
           value={slide.speakerNotes ?? ""}
-          placeholder="Talking points and explanation what you will say out loud while presenting this slide"
+          placeholder="Explain why/how, walk through a concrete example, then ask a check question and give its answer. Aim for 40-80 words."
           onChange={(e) =>
             patch({ speakerNotes: e.target.value || undefined })
           }
         />
         <Counter value={slide.speakerNotes} max={SLIDE_LIMITS.speakerNotes} />
+        <Text fontSize="12px" color="black.20" mt="6px">
+          Keep slide points concise. Use these notes for the deeper explanation you will teach aloud; they are not shown on the slide.
+        </Text>
       </Box>
     </Box>
   );

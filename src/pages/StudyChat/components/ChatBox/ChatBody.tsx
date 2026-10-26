@@ -3,6 +3,7 @@ import {
   Box,
   Circle,
   Flex,
+  IconButton,
   Image,
   Modal,
   ModalCloseButton,
@@ -11,21 +12,130 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChatListData, ChatType, MessageType } from "src/types";
-import { ChatMediaType, getUploadedDataPreview, lessonIdFromUrl } from "../../utils";
+import {
+  ChatMediaType,
+  getContactDisplayName,
+  getUploadedDataPreview,
+  lessonIdFromUrl,
+} from "../../utils";
 import { useStoreSelector } from "src/redux/hooks";
-import { getContactDisplayName } from "../../utils";
 import { VideoPlayer } from "src/components";
+import { BsReply } from "react-icons/bs";
+import { parseReplyMessage } from "../../reply";
+import ReplyPreview from "./ReplyPreview";
+
+interface MessageRowProps {
+  children: React.ReactNode;
+  isIncoming: boolean;
+  onReply: () => void;
+}
+
+const MessageRow = ({ children, isIncoming, onReply }: MessageRowProps) => {
+  const [offset, setOffset] = React.useState(0);
+  const gestureRef = React.useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    direction: "pending" | "horizontal" | "vertical";
+  } | null>(null);
+
+  const resetGesture = () => {
+    gestureRef.current = null;
+    setOffset(0);
+  };
+
+  return (
+    <Box
+      role="group"
+      alignSelf={isIncoming ? "flex-start" : "flex-end"}
+      maxW={{ base: "90%", md: "80%" }}
+      position="relative"
+      pr="36px"
+      style={{ touchAction: "pan-y pinch-zoom" }}
+      onPointerDown={(event) => {
+        if (event.pointerType !== "touch" || !event.isPrimary) return;
+        if ((event.target as Element).closest(
+          "button, a, input, textarea, audio, video, [role='button']",
+        )) return;
+        gestureRef.current = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          direction: "pending",
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const gesture = gestureRef.current;
+        if (!gesture || gesture.pointerId !== event.pointerId) return;
+        const dx = event.clientX - gesture.x;
+        const dy = event.clientY - gesture.y;
+        if (
+          gesture.direction === "pending" &&
+          Math.max(Math.abs(dx), Math.abs(dy)) > 10
+        ) {
+          gesture.direction = dx < 0 && Math.abs(dx) > Math.abs(dy) * 1.5
+            ? "horizontal"
+            : "vertical";
+        }
+        if (gesture.direction === "horizontal") {
+          setOffset(Math.max(-72, Math.min(0, dx)));
+        }
+      }}
+      onPointerUp={(event) => {
+        const gesture = gestureRef.current;
+        if (!gesture || gesture.pointerId !== event.pointerId) return;
+        const dx = event.clientX - gesture.x;
+        const dy = event.clientY - gesture.y;
+        const shouldReply =
+          gesture.direction === "horizontal" &&
+          dx <= -56 &&
+          Math.abs(dx) > Math.abs(dy) * 1.5;
+        resetGesture();
+        if (shouldReply) onReply();
+      }}
+      onPointerCancel={resetGesture}
+      onLostPointerCapture={resetGesture}
+    >
+      <IconButton
+        aria-label="Reply to message"
+        title="Reply"
+        icon={<BsReply />}
+        size="sm"
+        variant="ghost"
+        color="#6143B7"
+        position="absolute"
+        right="0"
+        top="50%"
+        transform="translateY(-50%)"
+        opacity={offset < 0 ? 1 : { base: 1, md: 0 }}
+        _groupHover={{ opacity: 1 }}
+        _groupFocusWithin={{ opacity: 1 }}
+        _focusVisible={{ opacity: 1, boxShadow: "outline" }}
+        onClick={onReply}
+      />
+      <Box
+        transform={`translateX(${offset}px)`}
+        transition={offset ? "none" : "transform 0.15s ease"}
+      >
+        {children}
+      </Box>
+    </Box>
+  );
+};
 
 interface ChatBodyProps {
   messages: Array<MessageType>;
   loading: boolean;
   activeChat: ChatListData;
+  onReply: (message: MessageType) => void;
 }
 
 const ChatBody: React.FC<ChatBodyProps> = ({
   messages,
   loading,
   activeChat,
+  onReply,
 }) => {
   const mediaCacheRef = React.useRef<Record<string, JSX.Element | null>>({});
 
@@ -53,9 +163,7 @@ const ChatBody: React.FC<ChatBodyProps> = ({
       }
     }
   }, [activeChat?.id, messages?.length, firstUnreadMessageId]);
-  const senderId =
-    activeChat.members?.find((item) => item._id === user.data?._id)?._id ||
-    activeChat.admin?._id;
+  const senderId = user.data?._id;
 
   const extractURLs = (text: string) => {
     const urlRegex = /\b((https?:\/\/|www\.)[^\s/$.?#].[^\s]*)/gi;
@@ -107,7 +215,7 @@ const ChatBody: React.FC<ChatBodyProps> = ({
 
     let updated = false;
     reversedMessages.forEach((item) => {
-      const urls = extractURLs(item.text) || [];
+      const urls = extractURLs(parseReplyMessage(item.text).text) || [];
       urls.forEach((url) => {
         if (!(url in mediaCacheRef.current)) {
           const preview =
@@ -128,10 +236,8 @@ const ChatBody: React.FC<ChatBodyProps> = ({
 
   return (
     <Flex
-      h={{
-        base: "calc(100dvh - 200px)",
-        md: "calc(100vh - 264px)",
-      }}
+      flex="1"
+      minH={0}
       p={"10px 16px 0"}
       overflowY="scroll"
       flexDir={"column-reverse"}
@@ -149,18 +255,16 @@ const ChatBody: React.FC<ChatBodyProps> = ({
 
       {!loading && messages?.length > 0
         ? reversedMessages?.map((item) => {
-            const urls = extractURLs(item.text) || [];
-            const visibleText = reformatText(item.text);
+            const parsedMessage = parseReplyMessage(item.text);
+            const urls = extractURLs(parsedMessage.text) || [];
+            const visibleText = reformatText(parsedMessage.text);
             const isSender = senderId !== item.sender._id;
             const isNewInSession = new Date(item.createdAt).getTime() > sessionStartTimeRef.current;
 
             return (
               <React.Fragment key={item._id}>
-                <Box
-                  alignSelf={isSender ? "flex-start" : "flex-end"}
-                  maxW="60%"
-                >
-                  <Flex gap="4px">
+                <MessageRow isIncoming={isSender} onReply={() => onReply(item)}>
+                  <Flex gap="4px" minW={0}>
                     {isSender && (
                       <Circle size="20px" bg="#eee" overflow="hidden">
                         <Image
@@ -176,7 +280,8 @@ const ChatBody: React.FC<ChatBodyProps> = ({
                       backgroundColor={isSender ? "#D3C7FB" : "#F3ECF8"}
                       boxShadow="md"
                       borderRadius={14}
-                      minW={50}
+                      minW={0}
+                      maxW="100%"
                       padding={"4px 8px"}
                       flexDir={"column"}
                       gap={"4px"}
@@ -185,6 +290,9 @@ const ChatBody: React.FC<ChatBodyProps> = ({
                         border: "1.5px solid #9174F6"
                       } : undefined}
                     >
+                      {parsedMessage.reply && (
+                        <ReplyPreview reply={parsedMessage.reply} />
+                      )}
                       {urls.map((url) => {
                         const cachedPreview = mediaCacheRef.current[url];
                         if (cachedPreview !== undefined) {
@@ -214,7 +322,7 @@ const ChatBody: React.FC<ChatBodyProps> = ({
                       )}
                     </Flex>
                   </Flex>
-                </Box>
+                </MessageRow>
 
                 {item._id === firstUnreadMessageId && (
                   <Flex align="center" width="100%" my="3" justify="center">

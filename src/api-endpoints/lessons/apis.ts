@@ -3,9 +3,13 @@ import { Draft, CreateLessonFormValues } from "../../types";
 import { AxiosInstance as Axios } from "../../utils/axios";
 import { getToken } from "../../utils/constant";
 import { GenerateSlidesResponse } from "./interface";
+import { checkSlideConnection } from "./slideConnection";
 
 export const ACCEPTED_DOCUMENT_TYPES = ".pdf,.docx,.pptx";
 export const MAX_DOCUMENT_MB = 25;
+
+export const checkSlideServiceConnection = () =>
+  checkSlideConnection(Axios.getUri({ url: `${lessonRoute}/generate-slides` }));
 
 export const generateSlidesFromDocument = async (
   file: File,

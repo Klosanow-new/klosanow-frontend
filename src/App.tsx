@@ -51,6 +51,7 @@ import { useToast, Box } from "@chakra-ui/react";
 import { getSingleUser } from "./api-endpoints/user/user.api";
 import { updateUserData, addNotification } from "./redux/reducers/userReducer";
 import { markChatUnread } from "./utils/unreadChats";
+import { parseReplyMessage } from "./pages/StudyChat/reply";
 
 function App() {
   const location = useLocation();
@@ -126,8 +127,9 @@ function App() {
           payload?.chatId || payload?.studyChatId || payload?._id || undefined;
 
         const options: any = {
-          body:
+          body: parseReplyMessage(
             payload?.text || payload?.message || "You received a new message.",
+          ).text,
           icon: "/icon-192.png",
           badge: "/icon-192.png",
           tag,
@@ -177,7 +179,9 @@ function App() {
               _hover={{ textDecoration: "underline" }}
               py="1"
             >
-              {payload?.text || payload?.message || "Click to open chat"}
+              {parseReplyMessage(
+                payload?.text || payload?.message || "Click to open chat",
+              ).text}
             </Box>
           ),
           status: "info",
@@ -192,7 +196,9 @@ function App() {
       const notifObj = {
         _id: payload._id || new Date().getTime().toString(),
         sender: payload.sender,
-        message: payload.text || payload.message || "sent you a message",
+        message: parseReplyMessage(
+          payload.text || payload.message || "sent you a message",
+        ).text,
         action: "sent you a message",
         createdAt: payload.createdAt || new Date().toISOString(),
         isRead: false,

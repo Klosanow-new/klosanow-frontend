@@ -2,10 +2,14 @@ import React from "react";
 import {
   Box,
   Button,
+  Checkbox,
   Flex,
+  FormControl,
+  FormLabel,
   Input,
   NumberInput,
   NumberInputField,
+  Select,
   Text,
   useToast,
 } from "@chakra-ui/react";
@@ -15,13 +19,31 @@ import { colors } from "src/data/colors";
 import {
   ACCEPTED_DOCUMENT_TYPES,
   MAX_DOCUMENT_MB,
+  checkSlideServiceConnection,
   generateSlidesFromDocument,
 } from "src/api-endpoints/lessons";
+import {
+  describeSlideGenerationFailure,
+  SlideGenerationFailure,
+  SlideConnectionResult,
+} from "src/api-endpoints/lessons/slideConnection";
+import {
+  TEACHING_CONTEXT_LIMIT,
+  TEACHING_AUDIENCES,
+  TEACHING_APPROACHES,
+  TeachingAudience,
+  TeachingApproach,
+  buildLessonFocus,
+  buildTeachingGuidance,
+  parseGeneratedTeachingSlides,
+  revealTeachingContent,
+} from "./teaching";
 
 interface DocumentUploadProps {
-  onGenerated: (slides: Slide[]) => void;
+  onGenerated: (slides: Slide[], warnings: string[]) => void;
   /** Passed to the model as context. */
   subject?: string;
+  description?: string;
 }
 
 /**
@@ -48,16 +70,25 @@ const clock = (seconds: number) =>
 const DocumentUpload: React.FC<DocumentUploadProps> = ({
   onGenerated,
   subject,
+  description,
 }) => {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   const [file, setFile] = React.useState<File | null>(null);
   const [slideCount, setSlideCount] = React.useState(12);
+  const [focusOverride, setFocusOverride] = React.useState<string | null>(null);
+  const [audience, setAudience] = React.useState<TeachingAudience>("beginners");
+  const [approach, setApproach] = React.useState<TeachingApproach>("explain");
+  const [revealPoints, setRevealPoints] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
   const [uploadPercent, setUploadPercent] = React.useState(0);
-  const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [failure, setFailure] = React.useState<SlideGenerationFailure | null>(null);
+  const [checkingConnection, setCheckingConnection] = React.useState(false);
+  const [connectionResult, setConnectionResult] = React.useState<SlideConnectionResult | null>(null);
+  const lessonFocus = focusOverride ?? buildLessonFocus(subject, description);
+  const teachingGuidance = buildTeachingGuidance(audience, approach);
 
   React.useEffect(() => {
     if (!loading) return;
@@ -78,45 +109,75 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       return;
     }
 
-    setWarnings([]);
     setFile(picked);
+    setFailure(null);
+    setConnectionResult(null);
+  };
+
+  const handleCheckConnection = async () => {
+    setCheckingConnection(true);
+    setConnectionResult(null);
+    try {
+      setConnectionResult(await checkSlideServiceConnection());
+    } finally {
+      setCheckingConnection(false);
+    }
   };
 
   const handleGenerate = async () => {
-    if (!file) return;
+    if (!file || loading || checkingConnection) return;
     setLoading(true);
+    setFailure(null);
+    setConnectionResult(null);
     setElapsed(0);
     setUploadPercent(0);
-    setWarnings([]);
+    const startedAt = Date.now();
+    let uploadComplete = false;
+    const requestedCount = Math.min(30, Math.max(3, Math.round(slideCount)));
+    setSlideCount(requestedCount);
 
     try {
       const res = await generateSlidesFromDocument(
         file,
-        { slideCount, subject },
-        setUploadPercent
+        {
+          slideCount: requestedCount,
+          subject: lessonFocus.trim() || undefined,
+          // Use the existing short context channel; the API has no instructions field.
+          gradeLevel: teachingGuidance,
+        },
+        (percent) => {
+          uploadComplete = percent >= 100;
+          setUploadPercent(percent);
+        }
       );
 
-      const slides = res?.data?.slides ?? [];
-      if (!slides.length) throw new Error("No slides came back. Try again.");
+      const generated = parseGeneratedTeachingSlides(res?.data?.slides);
+      const slides = revealPoints ? generated.map(revealTeachingContent) : generated;
+      const warnings = [...(res.data.warnings ?? [])];
+      const changedLayouts = slides.filter((slide, index) => slide !== generated[index]).length;
+      if (changedLayouts) {
+        warnings.push(`${changedLayouts} slide layouts adjusted to reveal supporting content. No text or teacher notes were removed.`);
+      }
+      if (slides.length !== requestedCount) {
+        warnings.push(`Requested ${requestedCount} slides; the API returned ${slides.length}. Review coverage before recording.`);
+      }
+      if (res.data.meta?.condensed) {
+        warnings.push("The API condensed this source. Check that important examples and practice questions survived; use a shorter chapter if they did not.");
+      }
 
-      setWarnings(res.data.warnings ?? []);
-      onGenerated(slides);
+      onGenerated(slides, [...new Set(warnings)].map((warning) => `${file.name}: ${warning}`));
       setFile(null);
-
-      toast({
-        title: `${slides.length} slides generated`,
-        description: "Review and edit them before you record.",
-        status: "success",
-        duration: 5000,
-        position: "top-right",
+      if (inputRef.current) inputRef.current.value = "";
+    } catch (error: unknown) {
+      const nextFailure = describeSlideGenerationFailure(error, {
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        uploadComplete,
+        offline: !navigator.onLine,
       });
-    } catch (error: any) {
+      setFailure(nextFailure);
       toast({
-        title: "Could not generate slides",
-        description:
-          error?.response?.data?.message ??
-          error?.message ??
-          "Something went wrong",
+        title: nextFailure.title,
+        description: nextFailure.message,
         status: "error",
         duration: null,
         isClosable: true,
@@ -146,6 +207,49 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         pages. Writing the slides usually takes one to four minutes.
       </Text>
 
+      <Flex gap="12px" wrap="wrap" mb="12px">
+        <FormControl flex="1" minW={{ base: "100%", md: "240px" }}>
+          <FormLabel fontSize="13px" htmlFor="slide-lesson-focus">Lesson focus</FormLabel>
+          <Input
+            id="slide-lesson-focus"
+            size="sm"
+            bg="white"
+            value={lessonFocus}
+            maxLength={TEACHING_CONTEXT_LIMIT}
+            placeholder="What should students understand or be able to do?"
+            onChange={(event) => setFocusOverride(event.target.value)}
+            isDisabled={loading}
+            aria-describedby="slide-focus-help"
+          />
+          <Text id="slide-focus-help" fontSize="11px" color="black.30" mt="4px">
+            {lessonFocus.length}/{TEACHING_CONTEXT_LIMIT} characters sent to the AI. Edit this short focus to prioritize the learning goal.
+          </Text>
+        </FormControl>
+        <FormControl w={{ base: "100%", md: "160px" }}>
+          <FormLabel fontSize="13px" htmlFor="slide-audience">Learners</FormLabel>
+          <Select id="slide-audience" size="sm" bg="white" value={audience} onChange={(event) => setAudience(event.target.value as TeachingAudience)} isDisabled={loading}>
+            {Object.entries(TEACHING_AUDIENCES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select>
+        </FormControl>
+        <FormControl w={{ base: "100%", md: "220px" }}>
+          <FormLabel fontSize="13px" htmlFor="slide-approach">Teaching approach</FormLabel>
+          <Select id="slide-approach" size="sm" bg="white" value={approach} onChange={(event) => setApproach(event.target.value as TeachingApproach)} isDisabled={loading}>
+            {Object.entries(TEACHING_APPROACHES).map(([value, { label }]) => <option key={value} value={value}>{label}</option>)}
+          </Select>
+        </FormControl>
+      </Flex>
+      <Box mb="16px">
+        <Text fontSize="12px" color="black.30" mb="8px">
+          Teaching guidance: {teachingGuidance}. This requests richer teaching; the API still decides the output.
+        </Text>
+        <Checkbox size="sm" colorScheme="purple" isChecked={revealPoints} onChange={(event) => setRevealPoints(event.target.checked)} isDisabled={loading}>
+          Reveal supporting points when a layout would hide them
+        </Checkbox>
+        <Text fontSize="12px" color="black.30" mt="8px">
+          For a teachable lesson, upload a focused chapter with explanations, worked examples, and practice questions, not just a list of topics. Short slide text is supported by detailed teacher notes.
+        </Text>
+      </Box>
+
       <Flex gap="12px" align="center" wrap="wrap">
         <Button
           type="button"
@@ -167,7 +271,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         />
 
         <Flex align="center" gap="6px">
-          <Text fontSize="13px" color="black.30">
+            <Text as="label" htmlFor="slide-count" fontSize="13px" color="black.30">
             Slides
           </Text>
           <NumberInput
@@ -179,7 +283,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             onChange={(_, n) => setSlideCount(Number.isFinite(n) ? n : 12)}
             isDisabled={loading}
           >
-            <NumberInputField />
+            <NumberInputField id="slide-count" />
           </NumberInput>
         </Flex>
 
@@ -188,7 +292,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           bg={colors.primary[50]}
           color={colors.neutral[10]}
           _hover={{ opacity: 0.9 }}
-          isDisabled={!file || loading}
+          isDisabled={!file || loading || checkingConnection}
           isLoading={loading}
           loadingText="Generating"
           onClick={handleGenerate}
@@ -196,6 +300,31 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           Generate slides
         </Button>
       </Flex>
+
+      {failure && (
+        <Box mt="14px" p="12px" bg="white" border={`1px solid ${colors.secondary[80]}`} borderRadius="8px" role="alert">
+          <Text fontSize="14px" fontWeight="600">{failure.title}</Text>
+          <Text fontSize="13px" mt="4px" color="black.30">{failure.message}</Text>
+          <Text fontSize="12px" mt="8px" color="black.30">
+            Failed after {clock(failure.elapsedSeconds)} | {failure.uploadComplete ? "Upload finished" : "Upload not confirmed"}
+            {failure.status !== undefined ? ` | HTTP ${failure.status}` : ""}
+            {failure.code ? ` | ${failure.code}` : ""}
+          </Text>
+          <Text fontSize="12px" mt="4px" color="black.30">
+            Your document and teaching settings are kept. Generation is not automatically retried because the API may have already started the job.
+          </Text>
+          {failure.canCheckConnection && (
+            <Button type="button" size="sm" variant="outline" mt="10px" onClick={handleCheckConnection} isLoading={checkingConnection} loadingText="Checking API">
+              Check API connection
+            </Button>
+          )}
+          {connectionResult && (
+            <Text fontSize="13px" mt="8px" role="status" color={connectionResult.reachable ? colors.primary[70] : colors.secondary[80]}>
+              {connectionResult.message}
+            </Text>
+          )}
+        </Box>
+      )}
 
       {loading && (
         <Flex align="center" gap="8px" mt="12px">
@@ -220,15 +349,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         </Text>
       )}
 
-      {warnings.length > 0 && (
-        <Box mt="12px">
-          {warnings.map((warning) => (
-            <Text key={warning} fontSize="12px" color={colors.secondary[80]}>
-              • {warning}
-            </Text>
-          ))}
-        </Box>
-      )}
     </Box>
   );
 };

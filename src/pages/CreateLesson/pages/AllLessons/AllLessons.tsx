@@ -18,7 +18,8 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { capitalize, uniqueId } from "lodash";
+import { capitalize } from "lodash";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "src/components";
 import { Lesson, LessonType } from "src/types";
@@ -34,6 +35,7 @@ import { createLessonPagePath, studyChatPagePath } from "src/data/pageUrl";
 import { CaretDownIcon } from "src/assets/svgs";
 import WatchLessonModal from "../../modals/WatchLessonModal";
 import OverlayLoader from "src/components/OverlayLoader";
+import { Search } from "src/components/Search/Search";
 
 interface AllLessonsState {
   type: LessonType;
@@ -47,6 +49,9 @@ interface AllLessonsState {
 const AllLessons: React.FC = () => {
   const toast = useToast();
   const dispatch = useStoreDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = (searchParams.get("q") || "").trim();
+  const normalizedQuery = searchQuery.toLowerCase();
   const lessons = useStoreSelector((state) => state.lessons["lessons"]);
   const savedLessons = useStoreSelector(
     (state) => state.lessons["savedLessons"]
@@ -81,7 +86,11 @@ const AllLessons: React.FC = () => {
   const lessonData = {
     [LessonType.Created]: [...(lessons.data || [])].reverse(),
     [LessonType.Saved]: [...(savedLessons.data || [])].reverse(),
-  }[state.type];
+  }[state.type].filter((lesson) =>
+    !normalizedQuery ||
+    [lesson.title, lesson.about, lesson.tag, lesson.tutor_name, lesson.user?.name]
+      .some((value) => value?.toLowerCase().includes(normalizedQuery))
+  );
 
   const lessonText =
     state.type === LessonType.Created ? LessonType.Saved : LessonType.Created;
@@ -140,6 +149,9 @@ const AllLessons: React.FC = () => {
             : "Sharing lesson"
         }
       />
+      <Box display={["block", "none"]}>
+        <Search />
+      </Box>
       <Flex
         align="center"
         mb={{
@@ -179,7 +191,26 @@ const AllLessons: React.FC = () => {
 
       <Box>
         {lessonData.length === 0 ? (
-          isSavedView ? (
+          searchQuery ? (
+            <Box textAlign="center" py={12}>
+              <Text fontSize="xl" fontWeight="500" role="status">
+                No matching lessons
+              </Text>
+              <Text mt={2}>
+                No {state.type} lessons match &quot;{searchQuery}&quot;. Try a
+                different search or switch lesson lists.
+              </Text>
+              <Button
+                mt={4}
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams);
+                  params.delete("q");
+                  setSearchParams(params, { replace: true });
+                }}>
+                Clear search
+              </Button>
+            </Box>
+          ) : isSavedView ? (
             <EmptyState
               title="saved lesson"
               link={studyChatPagePath}
@@ -200,7 +231,7 @@ const AllLessons: React.FC = () => {
             {lessonData.map((lesson) => (
               <LessonCard
                 lesson={lesson}
-                key={uniqueId(`lesson_${lesson._id}`)}
+                key={lesson._id}
                 handleWatch={(activeLesson) =>
                   handleStateUpdate({ showModal: true, activeLesson })
                 }

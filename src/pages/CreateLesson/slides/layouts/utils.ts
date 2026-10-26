@@ -1,4 +1,4 @@
-import { DepthGesture, Slide, SlideVisual } from "src/types";
+import type { DepthGesture, Slide, SlideVisual } from "src/types";
 
 export interface LayoutProps {
   slide: Slide;
@@ -26,4 +26,4 @@ export const splitLabelled = (item: string) => {
   return match ? { label: match[1], text: match[2] } : { text: item };
 };
 
-export const bodyOf = (slide: Slide) => slide.body?.filter(Boolean) ?? [];
+export const bodyOf = (slide: Slide) => slide.body?.filter((point) => point.trim()) ?? [];
