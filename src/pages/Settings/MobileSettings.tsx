@@ -6,6 +6,7 @@ import userImg from "../../assets/SettingsPageImg/user.png";
 import bell from "../../assets/SettingsPageImg/Vector.png";
 import wallet from "../../assets/SettingsPageImg/Wallet.png";
 import help from "../../assets/SettingsPageImg/Help.png";
+import { signOut } from "src/utils/session";
 import logout from "../../assets/SettingsPageImg/Log-out.png";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
@@ -110,7 +111,10 @@ const MobileSettings = () => {
           <Box mt="5" background="neutral.10" borderRadius="10" padding="10px">
             <SettingsItem
               imageSrc={logout}
-              action={() => disconnectWebSocket()}
+              action={() => {
+                disconnectWebSocket();
+                signOut();
+              }}
               text="Logout"
               link="/"
             />

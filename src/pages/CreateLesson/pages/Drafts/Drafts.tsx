@@ -52,7 +52,7 @@ const Drafts: React.FC = () => {
   });
 
   return (
-    <Box p={["10px 16px 100px", "24px 30px"]}>
+    <Box w="full" maxW="1280px" mx="auto" px={{ base: "4", md: "6", xl: "8" }} py={{ base: "5", md: "8" }}>
       <OverlayLoader loading={loading} description="Deleting draft" />
       <Text
         fontWeight={{

@@ -1,44 +1,44 @@
-import { Box, useDisclosure } from "@chakra-ui/react";
+import { Box, Flex, useDisclosure } from "@chakra-ui/react";
 import { Outlet } from "react-router-dom";
 import { SideBar, NavBar, BottomNav, EnablePushBanner } from "../../";
 import NotificationModal from "../../Modals/NotificationModal/NotificationModal";
-import { getToken } from "src/utils/constant";
-import { useEffect } from "react";
 import useLiveNotifications from "src/hooks/useLiveNotifications";
 import MobileNoticeModal from "src/pages/Dashboard/components/MobileNotice";
 
 const DashboardLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const token = getToken();
   const { notifications } = useLiveNotifications();
+  const unread = notifications.filter((n) => !n.isRead).length;
 
-  useEffect(() => {
-    if (!token) window.location.reload();
-  }, [token]);
+  // ProtectedRoute already redirects signed-out visitors. The previous
+  // `if (!token) window.location.reload()` here could loop forever when the
+  // persisted user outlived the stored token.
 
   return (
-    <Box display="flex">
+    <Flex minH="100dvh" bg="ink.50">
       <SideBar />
-      <Box width="full" h="100vh">
-        <NavBar
-          notificationCtrl={onOpen}
-          notificationLength={notifications.length}
-        />
+      <Flex direction="column" flex="1" minW="0" h="100dvh">
+        <NavBar notificationCtrl={onOpen} notificationLength={unread} />
         <NotificationModal
           isOpen={isOpen}
           onClose={onClose}
           notifications={notifications}
         />
         <MobileNoticeModal />
-        <Box width="full" overflow={"scroll"} h="calc(100vh - 60px)">
+        <Box
+          as="main"
+          flex="1"
+          minH="0"
+          overflowY="auto"
+          overflowX="hidden"
+          pb={{ base: "88px", md: "0" }}
+        >
           <EnablePushBanner />
-
           <Outlet />
-
-          <BottomNav />
         </Box>
-      </Box>
-    </Box>
+        <BottomNav />
+      </Flex>
+    </Flex>
   );
 };
 

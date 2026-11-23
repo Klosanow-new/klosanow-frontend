@@ -1,72 +1,61 @@
-import { Box, Icon, Link, Text } from "@chakra-ui/react";
-import {
-  MdOutlineLibraryAdd,
-  MdOutlineChat,
-  MdPersonOutline,
-} from "react-icons/md";
-import { AiOutlineHome } from "react-icons/ai";
-import { NavLink as RouterLink } from "react-router-dom";
-import {
-  allLessonsPagePath,
-  dashboardPagePath,
-  studyChatPagePath,
-} from "src/data/pageUrl";
+import { Flex, Icon, Text } from "@chakra-ui/react";
+import { Link, useLocation } from "react-router-dom";
+import { isNavLinkActive, mobileNavLinks } from "../Layout/navLinks";
 
-interface BottomNavProps {
-  actions?: {
-    handleClickStudyChat: () => void;
-  };
-}
-
-const getNavItems = (actions?: { handleClickStudyChat: () => void }) => [
-  { title: "Home", icon: AiOutlineHome, link: dashboardPagePath },
-  {
-    title: "Lessons",
-    icon: MdOutlineLibraryAdd,
-    link: allLessonsPagePath,
-  },
-  {
-    title: "Study Chat",
-    icon: MdOutlineChat,
-    link: studyChatPagePath,
-    action: () =>
-      actions?.handleClickStudyChat && actions.handleClickStudyChat(),
-  },
-  { title: "Profile", icon: MdPersonOutline, link: "/settings" },
-];
-
-const BottomNav: React.FC<BottomNavProps> = ({ actions }) => {
-  const navItems = getNavItems(actions);
+const BottomNav: React.FC = () => {
+  const { pathname } = useLocation();
 
   return (
-    <Box
-      pos="fixed"
+    <Flex
+      as="nav"
+      aria-label="Primary"
+      position="fixed"
       bottom="0"
       left="0"
       right="0"
-      p="1rem"
-      w="100%"
-      bg="neutral.5"
-      display={["block", "none"]}
+      zIndex="sticky"
+      display={{ base: "flex", md: "none" }}
+      justify="space-around"
+      bg="rgba(255,255,255,0.94)"
+      backdropFilter="saturate(180%) blur(10px)"
+      borderTop="1px solid"
+      borderColor="ink.100"
+      pt="2"
+      pb="calc(0.5rem + env(safe-area-inset-bottom))"
     >
-      <Box display="flex" justifyContent="space-around" alignItems="center">
-        {navItems.map((nav) => (
-          <Link as={RouterLink} to={nav.link} key={nav.title}>
-            <Box
-              display="flex"
-              flexDir="column"
-              alignItems="center"
-              onClick={() => nav?.action && nav.action()}
+      {mobileNavLinks.map((link) => {
+        const active = isNavLinkActive(link, pathname);
+        return (
+          <Flex
+            key={link.label}
+            as={Link}
+            to={link.href}
+            aria-current={active ? "page" : undefined}
+            direction="column"
+            align="center"
+            gap="1"
+            minW="64px"
+            py="1"
+            color={active ? "brand.600" : "ink.500"}
+          >
+            <Flex
+              align="center"
+              justify="center"
+              h="28px"
+              w="52px"
+              borderRadius="full"
+              bg={active ? "brand.50" : "transparent"}
+              transition="background 0.15s ease"
             >
-              <Icon fontSize={25} as={nav.icon} />
-              <Text fontSize="12px" textColor="black.50">
-                {nav.title}
-              </Text>
-            </Box>
-          </Link>
-        ))}
-      </Box>
-    </Box>
+              <Icon as={link.icon} boxSize={5} />
+            </Flex>
+            <Text fontSize="11px" fontWeight={active ? 700 : 500}>
+              {link.label}
+            </Text>
+          </Flex>
+        );
+      })}
+    </Flex>
   );
 };
 

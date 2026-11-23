@@ -1,233 +1,94 @@
-import {
-  Box,
-  Text,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  VStack,
-  Image,
-  Flex,
-  Spinner,
-  InputGroup,
-  InputRightElement,
-} from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { Box, Button, Link, Stack } from "@chakra-ui/react";
 import { useFormik } from "formik";
-import { ResetPasswordSchema } from "../schema/auth.schema";
-import { ResetPasswordApi } from "../../../api-endpoints/auth/auth.api";
 import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
-import { ResetPasswordValues } from "../../../types/auth/authInterface";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouteLink, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { InputError } from "../../../components";
-import { SlideTemplate } from "src/pages/OnboardingSlides/SlideTemplate";
-// import { OnboardingSlides } from "../..";
-import logo from "../../../assets/SplashScreenImg/SplashLogo.png";
-import { slides } from "../../Onboarding/utils/SlideData";
-import { useState } from "react";
+import { ResetPasswordSchema } from "../schema/auth.schema";
+import { ResetPasswordApi } from "../../../api-endpoints/auth/auth.api";
+import { ResetPasswordValues } from "../../../types/auth/authInterface";
+import AuthLayout from "src/components/AuthLayout/AuthLayout";
+import { PasswordField } from "src/components/AuthLayout/fields";
+
+type FormValues = Omit<ResetPasswordValues, "token">;
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
   const { token } = useParams<{ token: string }>();
-
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const resetSlide = slides[2];
 
   const { mutate, isLoading } = useMutation(ResetPasswordApi, {
     onSuccess: (data) => {
-      console.log("Verification Response", data);
       toast.success(data?.message || "Password reset successfully");
-      setTimeout(() => {
-        navigate("/sign-in");
-      }, 2000);
+      setTimeout(() => navigate("/sign-in"), 1500);
     },
     onError: (error: AxiosError<{ message: string }>) => {
-      if (error.response) {
-        toast.error(error?.response?.data?.message || "Something went wrong");
-      } else {
-        toast.error(error?.message);
-      }
+      toast.error(
+        error?.response?.data?.message || error?.message || "Something went wrong"
+      );
     },
   });
 
-  const handleOnSubmit = (values: Omit<ResetPasswordValues, "token">) => {
-    console.log(values);
-
-    if (!token) {
-      toast.error("Invalid token");
-      return;
-    }
-
-    const payload: ResetPasswordValues = {
-      token,
-      password: values.password,
-      confirmPassword: values.confirmPassword,
-    };
-
-    mutate(payload);
-  };
-
-  const formik = useFormik({
-    initialValues: {
-      password: "",
-      confirmPassword: "",
-    },
+  const formik = useFormik<FormValues>({
+    initialValues: { password: "", confirmPassword: "" },
     validationSchema: ResetPasswordSchema,
-    onSubmit: handleOnSubmit,
+    onSubmit: (values) => {
+      if (!token) {
+        toast.error("This reset link is invalid. Request a new one.");
+        return;
+      }
+      mutate({ token, ...values });
+    },
   });
+
+  const err = (field: keyof FormValues) =>
+    formik.touched[field] && formik.errors[field];
 
   return (
-    <>
-      <Box hideBelow="lg">
-        <svg
-          style={{ position: "absolute", zIndex: "-1" }}
-          width="568"
-          height="160"
-          viewBox="0 0 568 160"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <ellipse
-            cx="-14.5"
-            cy="-240.5"
-            rx="582.5"
-            ry="400.5"
-            fill="#E5DEFD"
+    <AuthLayout
+      eyebrow="Almost there"
+      title="Choose a new password"
+      subtitle="Use at least 6 characters. You'll sign in with it from now on."
+      footer={
+        <Link as={RouteLink} to="/sign-in" color="brand.600" fontWeight={700}>
+          Back to sign in
+        </Link>
+      }
+    >
+      <Box as="form" onSubmit={formik.handleSubmit} noValidate>
+        <Stack spacing="5">
+          <PasswordField
+            name="password"
+            label="New password"
+            autoComplete="new-password"
+            placeholder="Enter a new password"
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={err("password")}
           />
-        </svg>
-      </Box>
-
-      <Flex height={{ base: "100dvh", lg: "100%" }}>
-        <VStack
-          width={{ lg: "50%", base: "0%" }}
-          hideBelow="lg"
-          display="flex"
-          py="2rem"
-          px="1rem"
-        >
-          <Box
-            style={{ position: "absolute", top: "5%", left: "5%" }}
-            width="8rem"
+          <PasswordField
+            name="confirmPassword"
+            label="Confirm new password"
+            autoComplete="new-password"
+            placeholder="Re-enter the new password"
+            value={formik.values.confirmPassword}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={err("confirmPassword")}
+          />
+          <Button
+            type="submit"
+            colorScheme="brand"
+            h="52px"
+            w="full"
+            isLoading={isLoading}
+            loadingText="Saving"
+            isDisabled={!(formik.dirty && formik.isValid)}
           >
-            <Image src={logo} alt="Dan Abramov" />
-          </Box>
-          <SlideTemplate {...resetSlide} />
-          {/* <OnboardingSlides slides={slides} /> */}
-        </VStack>
-
-        <Box w={{ base: "100%", lg: "50%" }} bg="#fafafa" py="2rem" px="1rem">
-          <VStack width={{ md: "100%", lg: "70%" }} margin="auto">
-            <Box width="100%">
-              <Text
-                color="secondary.50"
-                fontSize={{ lg: "1rem", base: "1.5rem" }}
-              ></Text>
-              <Text
-                fontSize={{ lg: "1.5rem", base: "1.5rem" }}
-                fontFamily="primary"
-                color="black.50"
-              >
-                Reset Password
-              </Text>
-            </Box>
-
-            <Box
-              as="form"
-              width="100%"
-              py="2rem"
-              onSubmit={formik.handleSubmit}
-            >
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  New Password
-                </FormLabel>
-                <InputGroup>
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    fontSize="sm"
-                    padding="1.6rem 1rem"
-                    bg="#fff"
-                    borderColor="#ddd"
-                    placeholder="Enter new password"
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.password}
-                  />
-                  <InputRightElement h="100%" pr="1rem">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                {formik.touched.password && formik.errors.password ? (
-                  <InputError error={formik.errors.password} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Confirm Password
-                </FormLabel>
-                <InputGroup>
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    fontSize="sm"
-                    padding="1.6rem 1rem"
-                    bg="#fff"
-                    borderColor="#ddd"
-                    placeholder="Re-enter new password"
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.confirmPassword}
-                  />
-                  <InputRightElement h="100%" pr="1rem">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    >
-                      {showConfirmPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                {formik.touched.confirmPassword &&
-                formik.errors.confirmPassword ? (
-                  <InputError error={formik.errors.confirmPassword} />
-                ) : null}
-              </FormControl>
-
-              <Box display="flex" justifyContent="center">
-                <Button
-                  width="100%"
-                  p="1.5rem"
-                  color="neutral.50"
-                  bgColor="primary.50"
-                  type="submit"
-                  disabled={!(formik.dirty && formik.isValid)}
-                >
-                  {isLoading ? (
-                    <Spinner size="sm" thickness="4px" />
-                  ) : (
-                    "Continue"
-                  )}
-                </Button>
-              </Box>
-            </Box>
-          </VStack>
-        </Box>
-      </Flex>
-    </>
+            Reset password
+          </Button>
+        </Stack>
+      </Box>
+    </AuthLayout>
   );
 }

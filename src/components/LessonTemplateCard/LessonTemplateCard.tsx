@@ -34,7 +34,7 @@ const LessonTemplateCard = ({
           alt={cardTitle}
           borderRadius="4px"
           marginTop="-70px"
-          display={["block", "none"]}
+          display={{ base: "block", md: "none" }}
           width="120px"
           height="120px"
         />

@@ -1,6 +1,5 @@
 import React from "react";
 import { Box, Flex } from "@chakra-ui/react";
-import { BottomNav } from "../../../../components";
 import ContactsComp from "../../components/ContactsComp";
 import StudyGroupInfo from "../../components/StudyGroupInfo";
 import StudyChatEmptyState from "../../components/StudyChatEmptyState";
@@ -47,7 +46,6 @@ const CreateStudyChat: React.FC = () => {
         </Box>
       </Flex>
 
-      <BottomNav />
     </Box>
   );
 };

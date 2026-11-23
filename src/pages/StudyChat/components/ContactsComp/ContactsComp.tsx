@@ -201,7 +201,7 @@ const ContactsComp: React.FC<ContactsProps> = ({ contacts }) => {
 
         <Box
           h="520px"
-          overflowY="scroll"
+          overflowY="auto"
           className="scrollbar"
           mt="14px"
           p={{

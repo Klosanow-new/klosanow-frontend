@@ -1,10 +1,24 @@
-import { Box, Button, Input } from "@chakra-ui/react";
+import {
+  Box,
+  Icon,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  type BoxProps,
+} from "@chakra-ui/react";
 import { FormEvent, useEffect, useState } from "react";
-import { CiSearch } from "react-icons/ci";
+import { HiOutlineMagnifyingGlass } from "react-icons/hi2";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { allLessonsPagePath } from "src/data/pageUrl";
 
-export const Search = () => {
+export const Search = ({
+  mb = 0,
+  onPage = false,
+}: {
+  mb?: BoxProps["mb"];
+  /** Inline on a grey page background rather than in the white top bar. */
+  onPage?: boolean;
+}) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
@@ -28,49 +42,40 @@ export const Search = () => {
   };
 
   return (
-    <Box mb={5}>
-      <Box
-        as="form"
-        role="search"
-        className="search"
-        width="full"
-        position="relative"
-        onSubmit={(event: FormEvent<HTMLFormElement>) => {
-          event.preventDefault();
-          searchLessons(query.trim(), isLessonsPage);
-        }}>
-        <Button
-          type="submit"
-          aria-label="Search lessons"
-          position="absolute"
-          zIndex={1}
-          top="0px"
-          left="-5px"
-          border="none"
-          cursor="pointer"
-          background="transparent"
-        >
-          <CiSearch color="#333" fontSize="1.5rem" />
-        </Button>
-
+    <Box
+      as="form"
+      role="search"
+      mb={mb}
+      w="full"
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        searchLessons(query.trim(), isLessonsPage);
+      }}
+    >
+      <InputGroup>
+        <InputLeftElement pointerEvents="none" h="full" pl="1">
+          <Icon as={HiOutlineMagnifyingGlass} boxSize={5} color="ink.400" />
+        </InputLeftElement>
         <Input
-          paddingX={10}
-          width="100%"
-          background="transparent"
-          type="text"
-          variant="outline"
-          color="black.50"
-          placeholder="Search for a lesson"
-          aria-label="Search for a lesson"
+          type="search"
+          h="44px"
+          pl="12"
+          bg={onPage ? "white" : "ink.50"}
+          borderColor={onPage ? "ink.200" : "transparent"}
+          borderRadius="full"
+          fontSize="sm"
+          placeholder="Search your lessons"
+          aria-label="Search your lessons"
+          _hover={{ borderColor: "ink.200" }}
+          _focus={{ bg: "white" }}
           value={query}
           onChange={(event) => {
             const value = event.target.value;
             setQuery(value);
             if (isLessonsPage) searchLessons(value, true);
           }}
-          _placeholder={{ fontSize: "14px" }}
         />
-      </Box>
+      </InputGroup>
     </Box>
   );
 };

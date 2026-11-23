@@ -29,3 +29,4 @@ klosanow-slides-api
 
 # Local env overrides (slides API base url during development)
 .env.local
+vite.config.ts.timestamp-*

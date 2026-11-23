@@ -66,7 +66,7 @@ const LessonPreview: React.FC = () => {
           <Box
             h="100%"
             padding="16px 24px"
-            overflow="scroll"
+            overflow="auto"
             className="hide-scroll">
             {scrollItems.map((item) => (
               <div

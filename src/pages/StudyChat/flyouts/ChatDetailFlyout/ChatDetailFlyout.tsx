@@ -83,7 +83,7 @@ const ChatDetailFlyout: React.FC = () => {
           <Text fontSize="18px">Contact Info</Text>
         </Flex>
 
-        <Box h="100%" overflowY="scroll">
+        <Box h="100%" overflowY="auto">
           <Grid
             h={isGroupChat ? "316px" : "531px"}
             bg={colors.primary[10]}
