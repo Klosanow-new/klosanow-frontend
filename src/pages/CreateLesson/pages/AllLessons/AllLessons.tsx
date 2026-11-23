@@ -2,10 +2,8 @@ import React from "react";
 import {
   Box,
   Flex,
-  IconButton,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Heading,
+  SimpleGrid,
   Text,
   useToast,
   Button,
@@ -18,7 +16,6 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { capitalize } from "lodash";
 import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "src/components";
@@ -32,7 +29,6 @@ import {
 } from "src/api-endpoints/lessons";
 import { useStoreDispatch, useStoreSelector } from "src/redux/hooks";
 import { createLessonPagePath, studyChatPagePath } from "src/data/pageUrl";
-import { CaretDownIcon } from "src/assets/svgs";
 import WatchLessonModal from "../../modals/WatchLessonModal";
 import OverlayLoader from "src/components/OverlayLoader";
 import { Search } from "src/components/Search/Search";
@@ -58,7 +54,10 @@ const AllLessons: React.FC = () => {
   );
 
   const initialState: AllLessonsState = {
-    type: LessonType.Created,
+    type:
+      searchParams.get("type") === LessonType.Saved
+        ? LessonType.Saved
+        : LessonType.Created,
     showModal: false,
     activeLesson: null,
     showFlyout: false,
@@ -92,9 +91,6 @@ const AllLessons: React.FC = () => {
       .some((value) => value?.toLowerCase().includes(normalizedQuery))
   );
 
-  const lessonText =
-    state.type === LessonType.Created ? LessonType.Saved : LessonType.Created;
-
   const handleDelete = async (id: string) => {
     handleStateUpdate({ loading: true, actonType: "delete" });
 
@@ -109,7 +105,7 @@ const AllLessons: React.FC = () => {
       toast({
         title: isSavedView
           ? "Lesson removed successfully"
-          : "Lesson deleted succesfully",
+          : "Lesson deleted successfully",
         duration: 3000,
         position: "top-right",
         status: "success",
@@ -138,7 +134,12 @@ const AllLessons: React.FC = () => {
   });
 
   return (
-    <Box p={["10px 16px 100px", "24px 30px"]}>
+    <Box
+      w="full"
+      maxW="1280px"
+      mx="auto"
+      px={{ base: "4", md: "6", xl: "8" }}
+      py={{ base: "5", md: "8" }}>
       <OverlayLoader
         loading={state.loading}
         description={
@@ -149,44 +150,58 @@ const AllLessons: React.FC = () => {
             : "Sharing lesson"
         }
       />
-      <Box display={["block", "none"]}>
-        <Search />
+      <Box display={{ base: "block", md: "none" }}>
+        <Search mb={5} onPage />
       </Box>
       <Flex
-        align="center"
-        mb={{
-          base: "56px",
-          md: "70px",
-        }}>
-        <Text
-          fontSize={{
-            base: "24px",
-          }}
-          fontWeight="500">
-          {capitalize(state.type)} lessons
-        </Text>
-
-        <Popover>
-          <PopoverTrigger>
-            <IconButton
-              aria-label="lesson"
-              icon={<CaretDownIcon />}
-              bg="transparent"
-              _hover={{ bg: "transparent" }}
-            />
-          </PopoverTrigger>
-          <PopoverContent w="max-content">
-            <Box
-              as="button"
-              onClick={() => handleStateUpdate({ type: lessonText })}
-              padding="12px 24px"
-              _hover={{
-                bg: "#eee",
-              }}>
-              {capitalize(lessonText)} lessons
-            </Box>
-          </PopoverContent>
-        </Popover>
+        align={{ base: "flex-start", sm: "center" }}
+        justify="space-between"
+        direction={{ base: "column", sm: "row" }}
+        gap="4"
+        mb={{ base: "6", md: "8" }}>
+        <Box>
+          <Heading as="h1" fontSize={{ base: "2xl", md: "3xl" }}>
+            {isSavedView ? "Saved lessons" : "My lessons"}
+          </Heading>
+          <Text color="ink.500" fontSize="sm" mt="1">
+            {lessonData.length}{" "}
+            {lessonData.length === 1 ? "lesson" : "lessons"}
+            {searchQuery ? ` matching “${searchQuery}”` : ""}
+          </Text>
+        </Box>
+        <Flex role="tablist" bg="ink.100" p="1" borderRadius="full" gap="1">
+          {[
+            { label: "My lessons", type: LessonType.Created },
+            { label: "Saved", type: LessonType.Saved },
+          ].map((tab) => {
+            const selected = state.type === tab.type;
+            return (
+              <Box
+                as="button"
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                key={tab.type}
+                onClick={() => {
+                  handleStateUpdate({ type: tab.type });
+                  const params = new URLSearchParams(searchParams);
+                  if (tab.type === LessonType.Saved) params.set("type", "saved");
+                  else params.delete("type");
+                  setSearchParams(params, { replace: true });
+                }}
+                px="4"
+                py="1.5"
+                borderRadius="full"
+                fontSize="sm"
+                fontWeight={selected ? 700 : 500}
+                color={selected ? "ink.900" : "ink.500"}
+                bg={selected ? "white" : "transparent"}
+                boxShadow={selected ? "sm" : "none"}>
+                {tab.label}
+              </Box>
+            );
+          })}
+        </Flex>
       </Flex>
 
       <Box>
@@ -220,14 +235,7 @@ const AllLessons: React.FC = () => {
             <EmptyState title="lesson" link={createLessonPagePath} />
           )
         ) : (
-          <Flex
-            justify={{
-              base: "center",
-              md: "flex-start",
-            }}
-            align="center"
-            flexWrap="wrap"
-            gap="24px">
+          <SimpleGrid columns={{ base: 1, sm: 2, xl: 3 }} spacing="5">
             {lessonData.map((lesson) => (
               <LessonCard
                 lesson={lesson}
@@ -243,7 +251,7 @@ const AllLessons: React.FC = () => {
                 handleDelete={promptDeleteLesson}
               />
             ))}
-          </Flex>
+          </SimpleGrid>
         )}
       </Box>
 

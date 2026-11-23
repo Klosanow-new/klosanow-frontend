@@ -1,50 +1,31 @@
 import { Box, Center, Image } from "@chakra-ui/react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import SplashImg from "../../assets/SplashScreenImg/SplashLogo.png";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
+/** Purely visual. Routing decisions live in the Onboarding page. */
 export default function SplashScreen(): JSX.Element {
-  const navigate = useNavigate();
-
-  const handleVisit = () => {
-    const value = localStorage.getItem("isFirstVisit");
-
-    if (value === null) {
-      setTimeout(() => {
-        navigate("/");
-        localStorage.setItem("isFirstVisit", "true");
-      }, 3000);
-    } else if (value === "true") {
-      setTimeout(() => {
-        navigate("/sign-in");
-      }, 3000);
-    }
-  };
-
-  useEffect(() => {
-    handleVisit();
-  }, []);
   return (
-    <AnimatePresence mode="wait">
+    <Center h="100dvh" bg="white" flexDirection="column" gap="8">
       <motion.div
-        initial={{ opacity: 0, translateY: 150, scale: 0.9 }}
-        animate={{ opacity: 1, translateY: 0, scale: 1 }}
-        transition={{
-          type: "spring",
-          stiffness: 60,
-          damping: 30,
-          delay: 0.1,
-          duration: 1.5,
-        }}
-        exit={{ opacity: 0, translateY: 80, scale: 0.9 }}
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 80, damping: 18 }}
       >
-        <Box>
-          <Center h="100dvh">
-            <Image src={SplashImg} alt="klosanow logo" />
-          </Center>
-        </Box>
+        <Image src={SplashImg} alt="Klosanow" h={{ base: "56px", md: "72px" }} />
       </motion.div>
-    </AnimatePresence>
+      <Box w="120px" h="4px" bg="brand.50" borderRadius="full" overflow="hidden">
+        <motion.div
+          initial={{ x: "-100%" }}
+          animate={{ x: "100%" }}
+          transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: 999,
+            background: "var(--chakra-colors-brand-500)",
+          }}
+        />
+      </Box>
+    </Center>
   );
 }

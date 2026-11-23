@@ -159,7 +159,7 @@ const StudyGroupInfo: React.FC = () => {
           <BackButtonIcon />
         </Box>
         <Text
-          fontFamily="Playfair Display, serif"
+          fontFamily="heading"
           fontSize="24px"
           fontWeight="600"
         >
@@ -167,7 +167,7 @@ const StudyGroupInfo: React.FC = () => {
         </Text>
       </Flex>
 
-      <Box h="628px" overflowY="scroll">
+      <Box h="628px" overflowY="auto">
         <Formik
           initialValues={initialValues}
           onSubmit={handleSubmit}
@@ -287,7 +287,7 @@ const StudyGroupInfo: React.FC = () => {
                           />
                         </Circle>
                         <Text
-                          fontFamily="Encode Sans"
+                          fontFamily="body"
                           fontSize="14px"
                           fontWeight="400"
                         >

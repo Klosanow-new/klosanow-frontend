@@ -1,53 +1,37 @@
-import { HiOutlineArrowLeft } from "react-icons/hi";
-import { Flex, Text } from "@chakra-ui/react";
+import { Flex, Heading, Icon, IconButton } from "@chakra-ui/react";
+import { HiOutlineArrowLeft } from "react-icons/hi2";
+import { useNavigate } from "react-router-dom";
 import { headerInterface } from "../../types/components/componetInterface";
 
-const Header = (props: headerInterface) => {
-  const { pageName } = props;
+/** Mobile page header: back button + title. Desktop pages render their own. */
+const Header = ({ pageName, link }: headerInterface) => {
+  const navigate = useNavigate();
+
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate(link || "/dashboard");
+  };
 
   return (
     <Flex
-      alignItems="center"
-      flexDirection="row"
-      gap="10px"
-      p="10px 5px 16px"
-      width="100%"
-      display={["flex", "none"]}
-      // display="none"
+      align="center"
+      gap="2"
+      pb="4"
+      w="full"
+      display={{ base: "flex", md: "none" }}
     >
-      <HiOutlineArrowLeft
-        fontSize={20}
-        onClick={() => {
-          history.back();
-        }}
+      <IconButton
+        aria-label="Go back"
+        icon={<Icon as={HiOutlineArrowLeft} boxSize={5} />}
+        variant="ghost"
+        borderRadius="full"
+        ml="-2"
+        onClick={goBack}
       />
-      {/* <Box width="fit-content">
-        {link ? (
-          <Link
-            as={ReachLink}
-            to={link}
-            margin="0px"
-            style={{
-              margin: "0px",
-              width: "fit-content",
-            }}
-          >
-            <HiArrowLeft fontSize={20} />
-          </Link>
-        ) : (
-          <HiArrowLeft
-            fontSize={20}
-            onClick={() => {
-              history.back();
-            }}
-          />
-        )}
-      </Box> */}
-
       {pageName && (
-        <Text fontSize="18px" fontWeight="500" color="#2a2a2a" size="md">
+        <Heading as="h1" fontSize="lg">
           {pageName}
-        </Text>
+        </Heading>
       )}
     </Flex>
   );

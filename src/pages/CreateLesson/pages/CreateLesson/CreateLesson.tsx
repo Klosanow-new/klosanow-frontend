@@ -52,10 +52,10 @@ const CreateLesson: React.FC = () => {
   });
 
   return (
-    <Box py={["2rem", "0px"]} width="full" p="24px 30px">
+    <Box w="full" maxW="1280px" mx="auto" px={{ base: "4", md: "6", xl: "8" }} py={{ base: "5", md: "8" }}>
       <OverlayLoader loading={loading} />
       <Box>
-        <Text fontWeight={600} display={["none", "block"]} fontSize="32px">
+        <Text fontWeight={600} display={{ base: "none", md: "block" }} fontSize="32px">
           Create a lesson
         </Text>
         <LessonTemplateCard

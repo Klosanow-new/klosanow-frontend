@@ -1,142 +1,140 @@
-import { Box, Text, Image, Button } from "@chakra-ui/react";
-import logo from "../../assets/SplashScreenImg/SplashLogo.png";
-import { Link } from "react-router-dom";
-import { AiFillHome } from "react-icons/ai";
-import { NavItem } from "./NavItem";
-import { TbLogout } from "react-icons/tb";
-import { BsFillChatTextFill } from "react-icons/bs";
-import { IoMdSettings } from "react-icons/io";
-import { MdAppSettingsAlt } from "react-icons/md";
-import { IoMdHelpCircle } from "react-icons/io";
 import {
-  allLessonsPagePath,
-  createLessonPagePath,
-  dashboardPagePath,
-  studyChatPagePath,
-} from "src/data/pageUrl";
-import { uniqueId } from "lodash";
-import { DEVICE_SCREEN_SIZES } from "src/data/constants";
-import React from "react";
-
-const getNavLinks = (isDesktop: boolean) => [
-  {
-    name: "Dashboard",
-    href: dashboardPagePath,
-    icon: AiFillHome,
-    isVisible: true,
-  },
-  {
-    name: "Create Lessons",
-    href: createLessonPagePath,
-    icon: MdAppSettingsAlt,
-    isVisible: !isDesktop,
-  },
-  {
-    name: "Lessons",
-    href: allLessonsPagePath,
-    icon: MdAppSettingsAlt,
-    isVisible: isDesktop,
-  },
-  {
-    name: "Study Chat",
-    href: studyChatPagePath,
-    icon: BsFillChatTextFill,
-    isVisible: true,
-  },
-  {
-    name: "Settings",
-    href: "/Settings",
-    icon: IoMdSettings,
-    isVisible: true,
-  },
-];
+  Avatar,
+  Box,
+  Button,
+  Flex,
+  Icon,
+  Image,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
+import { Link, useLocation } from "react-router-dom";
+import { HiOutlinePlus, HiOutlineQuestionMarkCircle } from "react-icons/hi2";
+import { TbLogout2 } from "react-icons/tb";
+import logo from "../../assets/SplashScreenImg/SplashLogo.png";
+import { createLessonPagePath, dashboardPagePath } from "src/data/pageUrl";
+import { useStoreSelector } from "src/redux/hooks";
+import { signOut } from "src/utils/session";
+import { primaryNavLinks, isNavLinkActive } from "../Layout/navLinks";
+import { NavItem } from "./NavItem";
 
 const SideBar: React.FC = () => {
-  const [isDesktop, setIsDesktop] = React.useState(
-    window.innerWidth <= DEVICE_SCREEN_SIZES.laptop_sm
-  );
-
-  const Links = getNavLinks(isDesktop);
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth < DEVICE_SCREEN_SIZES.laptop_sm);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  const { pathname } = useLocation();
+  const user = useStoreSelector((state) => state.user?.data);
+  const fullName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.username ||
+    "Your account";
 
   return (
-    <Box
-      w="100%"
-      maxWidth="264px"
-      borderRight="0.3px solid #C8C8C8"
-      backgroundColor="#fff"
-      position={"relative"}
-      height="100vh"
-      zIndex="50"
-      display={["none", "flex"]}
-      flexDirection={"column"}
-      justifyContent={"space-between"}
-      py={"2rem"}
+    <Flex
+      as="aside"
+      aria-label="Main navigation"
+      w="260px"
+      flexShrink={0}
+      h="100dvh"
+      position="sticky"
+      top="0"
+      bg="white"
+      borderRight="1px solid"
+      borderColor="ink.100"
+      display={{ base: "none", md: "flex" }}
+      flexDirection="column"
+      px="4"
+      py="6"
       overflowY="auto"
-      css={{
-        "&::-webkit-scrollbar": {
-          display: "none",
-        },
-      }}
     >
-      <Box paddingLeft="50px">
-        <Box paddingRight={"30px"}>
-          <Image src={logo} alt="Klosanaw logo" width="120px" margin="auto" />
-          <Box w="full" h={"0.05rem"} my={"2rem"} bg="#CCCCCC" />
-        </Box>
-
-        <Box>
-          {Links.map((link, i) => {
-            return (
-              link.isVisible && (
-                <NavItem
-                  to={link.href}
-                  icon={link.icon}
-                  key={uniqueId(`nav-link-${i}`)}
-                >
-                  {link.name}
-                </NavItem>
-              )
-            );
-          })}
-        </Box>
+      <Box as={Link} to={dashboardPagePath} px="3" mb="8">
+        <Image src={logo} alt="Klosanow" h="34px" w="auto" />
       </Box>
 
-      <Box paddingLeft="50px" marginBottom="80px">
-        <Box
-          color={"red"}
-          display={"flex"}
-          alignItems={"center"}
-          mb={"2rem"}
-          cursor={"pointer"}
-          textColor={"#808080"}
+      <Button
+        as={Link}
+        to={createLessonPagePath}
+        colorScheme="brand"
+        leftIcon={<Icon as={HiOutlinePlus} boxSize={5} />}
+        mb="6"
+        mx="1"
+      >
+        New lesson
+      </Button>
+
+      <Text
+        px="3"
+        mb="2"
+        fontSize="xs"
+        fontWeight={700}
+        color="ink.400"
+        textTransform="uppercase"
+        letterSpacing="0.08em"
+      >
+        Menu
+      </Text>
+
+      <VStack as="nav" align="stretch" spacing="1">
+        {primaryNavLinks.map((link) => (
+          <NavItem
+            key={link.href}
+            to={link.href}
+            icon={link.icon}
+            isActive={isNavLinkActive(link, pathname)}
+          >
+            {link.label}
+          </NavItem>
+        ))}
+      </VStack>
+
+      <Box flex="1" minH="6" />
+
+      <VStack align="stretch" spacing="1" mb="4">
+        <NavItem
+          to="/help"
+          icon={HiOutlineQuestionMarkCircle}
+          isActive={pathname.startsWith("/help")}
         >
-          <Text mr={"0.5rem"} fontSize={"1.4rem"}>
-            <IoMdHelpCircle />
+          Help &amp; support
+        </NavItem>
+      </VStack>
+
+      <Flex
+        align="center"
+        gap="3"
+        p="3"
+        borderRadius="xl"
+        bg="ink.50"
+        border="1px solid"
+        borderColor="ink.100"
+      >
+        <Avatar
+          size="sm"
+          name={fullName}
+          src={user?.profilePhoto || undefined}
+          bg="brand.500"
+          color="white"
+        />
+        <Box minW="0" flex="1">
+          <Text fontSize="sm" fontWeight={700} noOfLines={1}>
+            {fullName}
           </Text>
-          <Link to="/help" color="red">
-            Help
-          </Link>
+          <Text fontSize="xs" color="ink.500" noOfLines={1}>
+            {user?.email}
+          </Text>
         </Box>
-        <Box color={"red"} display={"flex"} alignItems={"center"}>
-          <Button color="red" variant="link" fontWeight="500">
-            <Box mr={"0.5rem"}>
-              <TbLogout />
-            </Box>
-            Logout
-          </Button>
-        </Box>
-      </Box>
-    </Box>
+        <Button
+          variant="ghost"
+          size="sm"
+          p="0"
+          minW="8"
+          color="ink.500"
+          aria-label="Log out"
+          title="Log out"
+          _hover={{ color: "red.500", bg: "red.50" }}
+          onClick={() => signOut()}
+        >
+          <Icon as={TbLogout2} boxSize={5} />
+        </Button>
+      </Flex>
+    </Flex>
   );
 };
 

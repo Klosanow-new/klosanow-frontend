@@ -1,24 +1,27 @@
 import Axios from "axios";
-import { USER, getToken } from "./constant";
+import { getToken } from "./constant";
 import { APP_BASE_URL } from "../data/env";
 
-export const _token = USER()?.token || "";
+export const _token = getToken() || "";
 
 const AxiosInstance = Axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_URL_MVP,
   headers: {
     "Content-Type": "application/json",
-    ...(_token && { Authorization: `Bearer ${_token}` }),
   },
 });
 
+// Resolve the token per request. Reading it once at module load left the
+// header stale (or missing) after signing in without a full page refresh.
 AxiosInstance.interceptors.request.use(
   (config) => {
+    const token = getToken();
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 AxiosInstance.interceptors.response.use(

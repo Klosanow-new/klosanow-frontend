@@ -102,7 +102,7 @@ const DesktopSettings = () => {
         </Text>
 
         <Tabs width="full" marginTop="30px">
-          <TabList gap="20px" color="neutral.80" border="0px" overflow="scroll">
+          <TabList gap="20px" color="neutral.80" border="0px" overflowX="auto" overflowY="hidden">
             <Tab _selected={selectedStyle} style={tabStyle}>
               Account{" "}
             </Tab>
@@ -113,7 +113,7 @@ const DesktopSettings = () => {
               Subscriptions{" "}
             </Tab>
             <Tab _selected={selectedStyle} style={tabStyle}>
-              Change Pasword{" "}
+              Change Password{" "}
             </Tab>
             <Tab _selected={selectedStyle} style={tabStyle}>
               Help{" "}

@@ -4,15 +4,24 @@ import {
   Text,
   Image,
   Button,
-  Popover,
-  PopoverTrigger,
+  Flex,
+  Icon,
   IconButton,
-  PopoverContent,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  MenuDivider,
   useToast,
 } from "@chakra-ui/react";
+import {
+  HiEllipsisHorizontal,
+  HiOutlineEye,
+  HiOutlineShare,
+  HiOutlineTrash,
+  HiPlay,
+} from "react-icons/hi2";
 import { Lesson } from "../../types";
-import { capitalize } from "lodash";
-import { OptionWhiteIcon } from "../../assets/svgs";
 import { copyText } from "src/pages/StudyChat/utils";
 import { shareableLessonUrl } from "src/data/pageUrl";
 import thumbnailPlaceholder from "src/assets/images/thumb.jpg";
@@ -28,6 +37,7 @@ interface LessonCardProps {
   hasWatch?: boolean;
   hasDescription?: boolean;
   deleteLabel?: string;
+  /** Kept for API compatibility; cards now fill their grid cell. */
   width?: "sm" | "lg";
 }
 
@@ -35,75 +45,78 @@ const LessonCard: React.FC<LessonCardProps> = ({
   lesson,
   hasOptions,
   hasDescription = true,
-  descriptionLength,
+  descriptionLength = 120,
   hasWatch = true,
   handleWatch,
   handleDelete,
   handleView,
   deleteLabel,
-  width,
 }) => {
   const toast = useToast();
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const {
-    thumbnailUrl,
-    title,
-    about: description,
-    tutor_name,
-    videoUrl,
-  } = lesson;
-
-  // A lesson saved from chat may only carry the populated author.
-  const author = tutor_name || lesson.user?.name;
+  const { thumbnailUrl, title = "Untitled lesson", videoUrl } = lesson;
+  // Lessons saved from chat can arrive without an `about` field; calling
+  // .substring on undefined used to crash the whole list.
+  const description = lesson.about || "";
+  const author = lesson.tutor_name || lesson.user?.name;
   const [duration, setDuration] = React.useState("");
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
-    if (!video) return;
-
-    if (!Number.isFinite(video.duration)) return;
-
+    if (!video || !Number.isFinite(video.duration)) return;
     setDuration(formatDuration(video.duration));
   };
 
-  const cardWidth = {
-    sm: "299px",
-    lg: "354px",
-  }[width || "lg"];
+  const shortDescription =
+    description.length > descriptionLength
+      ? `${description.substring(0, descriptionLength).trimEnd()}…`
+      : description;
 
-  React.useEffect(() => {
-    return () => {
-      setDuration("");
-    };
-  }, []);
+  const share = () =>
+    copyText(shareableLessonUrl(lesson._id), () => {
+      toast({
+        title: "Link copied",
+        description: `Anyone with the link can watch “${title}”.`,
+        status: "success",
+        duration: 3000,
+      });
+    });
 
   return (
     <Box
-      width="100%"
-      minW={{
-        base: "280px",
-        sm: "299px",
-      }}
-      maxW={{
-        base: "350px",
-        lg: "330px",
-        xl: cardWidth,
-      }}
-      border={"1px solid #eee"}
-      borderRadius={12}
-      overflow={"hidden"}
-      onClick={() => (hasWatch ? () => null : handleWatch(lesson))}>
-      <Box position="relative">
+      role="group"
+      w="full"
+      bg="white"
+      border="1px solid"
+      borderColor="ink.100"
+      borderRadius="2xl"
+      overflow="hidden"
+      boxShadow="card"
+      transition="box-shadow 0.2s ease, transform 0.2s ease"
+      _hover={{ boxShadow: "cardHover", transform: "translateY(-2px)" }}
+      display="flex"
+      flexDirection="column"
+    >
+      <Box
+        position="relative"
+        as="button"
+        type="button"
+        aria-label={`Watch ${title}`}
+        onClick={() => handleWatch(lesson)}
+        sx={{ aspectRatio: "16 / 9" }}
+        w="full"
+        bg="ink.100"
+        overflow="hidden"
+      >
         <Image
-          width="full"
-          height="196px"
+          w="full"
+          h="full"
           objectFit="cover"
           src={thumbnailUrl}
           fallbackSrc={thumbnailPlaceholder}
-          alt={title}
-          borderRadius="xl"
-          bg="#eee"
-          borderBottom={"1px solid #eee"}
+          alt=""
+          transition="transform 0.35s ease"
+          _groupHover={{ transform: "scale(1.04)" }}
         />
         <video
           src={videoUrl}
@@ -112,115 +125,129 @@ const LessonCard: React.FC<LessonCardProps> = ({
           preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
         />
-
-        {hasOptions && (
-          <Box position="absolute" top="8px" right="7px">
-            <Popover placement="bottom">
-              <PopoverTrigger>
-                <IconButton
-                  aria-label="lesson-option"
-                  icon={<OptionWhiteIcon />}
-                  bg="transparent"
-                  w="max-content"
-                  _hover={{
-                    bg: "transparent",
-                  }}
-                />
-              </PopoverTrigger>
-              <PopoverContent w="max-content" overflow="hidden">
-                <Box
-                  as="button"
-                  fontSize="12px"
-                  padding="4px 6px"
-                  onClick={() =>
-                    copyText(shareableLessonUrl(lesson._id), () => {
-                      toast({
-                        title: `${lesson.title} copied`,
-                        description: "Lesson ready to share",
-                        colorScheme: "purple",
-                        variant: "subtle",
-                      });
-                    })
-                  }
-                  _hover={{
-                    bg: "#eee",
-                  }}>
-                  Share
-                </Box>
-                <Box
-                  as="button"
-                  fontSize="12px"
-                  padding="4px 6px"
-                  onClick={() => handleView && handleView(lesson)}
-                  _hover={{
-                    bg: "#eee",
-                  }}>
-                  View
-                </Box>
-                <Box
-                  as="button"
-                  fontSize="12px"
-                  padding="4px 6px"
-                  marginTop={"8px"}
-                  color="red"
-                  onClick={() => handleDelete && handleDelete(lesson)}
-                  _hover={{
-                    bg: "red",
-                    color: "white",
-                  }}>
-                  {deleteLabel || "Delete"}
-                </Box>
-              </PopoverContent>
-            </Popover>
-          </Box>
-        )}
-
+        <Flex
+          position="absolute"
+          inset="0"
+          align="center"
+          justify="center"
+          bg="blackAlpha.300"
+          opacity="0"
+          transition="opacity 0.2s ease"
+          _groupHover={{ opacity: 1 }}
+        >
+          <Flex
+            boxSize="52px"
+            borderRadius="full"
+            bg="whiteAlpha.900"
+            align="center"
+            justify="center"
+            color="brand.600"
+            boxShadow="lg"
+          >
+            <Icon as={HiPlay} boxSize={6} ml="2px" />
+          </Flex>
+        </Flex>
         {duration && (
           <Text
-            fontSize="12px"
-            background="primary.50"
-            color="#fff"
             position="absolute"
-            bottom="8px"
-            right="7px"
-            padding="1px 8px"
-            borderRadius="4px">
+            bottom="2"
+            right="2"
+            fontSize="xs"
+            fontWeight={600}
+            color="white"
+            bg="blackAlpha.700"
+            px="2"
+            py="0.5"
+            borderRadius="md"
+          >
             {duration}
           </Text>
         )}
       </Box>
 
-      <Box padding="8px 4px " width="full">
-        <Text fontSize={16} fontWeight="500" color="#000" mb="4px">
-          {capitalize(title)}
-        </Text>
+      <Flex direction="column" flex="1" p="4" gap="1.5">
+        <Flex align="flex-start" gap="2">
+          <Text
+            flex="1"
+            fontSize="md"
+            fontWeight={700}
+            color="ink.900"
+            noOfLines={2}
+            lineHeight="1.35"
+          >
+            {title}
+          </Text>
+          {hasOptions && (
+            <Menu placement="bottom-end" isLazy>
+              <MenuButton
+                as={IconButton}
+                aria-label="Lesson options"
+                icon={<Icon as={HiEllipsisHorizontal} boxSize={5} />}
+                size="sm"
+                variant="ghost"
+                color="ink.500"
+                mt="-1"
+                mr="-2"
+              />
+              <MenuList minW="180px">
+                <MenuItem
+                  icon={<Icon as={HiOutlineShare} boxSize={4} />}
+                  onClick={share}
+                >
+                  Copy share link
+                </MenuItem>
+                {handleView && (
+                  <MenuItem
+                    icon={<Icon as={HiOutlineEye} boxSize={4} />}
+                    onClick={() => handleView(lesson)}
+                  >
+                    View details
+                  </MenuItem>
+                )}
+                {handleDelete && (
+                  <>
+                    <MenuDivider />
+                    <MenuItem
+                      icon={<Icon as={HiOutlineTrash} boxSize={4} />}
+                      color="red.500"
+                      onClick={() => handleDelete(lesson)}
+                    >
+                      {deleteLabel || "Delete"}
+                    </MenuItem>
+                  </>
+                )}
+              </MenuList>
+            </Menu>
+          )}
+        </Flex>
 
-        {hasDescription && (
-          <Text fontSize={[12, 14]} color="black.30">
-            {description.substring(0, descriptionLength || 130)}
-            {description.length > (descriptionLength || 130) ? "..." : ""}{" "}
-            <Text as="span" color="black.40" fontWeight="500">
-              {author}
-            </Text>
+        {author && (
+          <Text fontSize="xs" fontWeight={600} color="brand.600">
+            {author}
+          </Text>
+        )}
+
+        {hasDescription && shortDescription && (
+          <Text fontSize="sm" color="ink.500" noOfLines={3}>
+            {shortDescription}
           </Text>
         )}
 
         {hasWatch && (
           <Button
-            mt="8px"
-            bg="primary.50"
-            color="#fff"
-            fontWeight="400"
-            fontSize="16px"
-            padding="18px 24px"
-            _hover={{
-              opacity: 0.8,
-            }}
-            onClick={() => handleWatch(lesson)}>
+            mt="auto"
+            pt="0"
+            alignSelf="flex-start"
+            size="sm"
+            variant="soft"
+            leftIcon={<Icon as={HiPlay} boxSize={4} />}
+            onClick={() => handleWatch(lesson)}
+            sx={{ marginTop: "auto !important" }}
+          >
             Watch now
           </Button>
         )}
-      </Box>
+      </Flex>
     </Box>
   );
 };

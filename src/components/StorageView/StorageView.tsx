@@ -105,7 +105,7 @@ const StorageViewComponent: React.FC<StorageCardProps> = ({
             </Flex>
           </Flex>
         </Flex>
-        <Text fontWeight="bold" textAlign="center" mt="30px" fontFamily="20px">
+        <Text fontWeight="bold" textAlign="center" mt="30px" fontSize="20px">
           {" "}
           {message}
         </Text>

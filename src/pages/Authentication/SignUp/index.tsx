@@ -1,67 +1,44 @@
 import { useMutation } from "@tanstack/react-query";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { useState } from "react";
 import {
   Box,
-  Text,
-  FormControl,
-  FormLabel,
-  Input,
   Button,
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
   Link,
-  VStack,
-  Image,
-  Flex,
-  Spinner,
-  InputGroup,
-  InputRightElement,
+  SimpleGrid,
+  Stack,
 } from "@chakra-ui/react";
 import { Link as RouteLink, useNavigate } from "react-router-dom";
 import { useFormik } from "formik";
-import { SignUpSchema } from "../schema/auth.schema";
-import { InputError } from "../../../components";
-import { signUpApi } from "../../../api-endpoints/auth/auth.api";
 import toast from "react-hot-toast";
 import { AxiosError } from "axios";
-import { SignUpValues } from "../../../types/auth/authInterface";
-import { OnboardingSlides } from "../..";
-import logo from "../../../assets/SplashScreenImg/SplashLogo.png";
-import { slides } from "../../Onboarding/utils/SlideData";
 import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import { SignUpSchema } from "../schema/auth.schema";
+import { signUpApi } from "../../../api-endpoints/auth/auth.api";
+import { SignUpValues } from "../../../types/auth/authInterface";
+import AuthLayout from "src/components/AuthLayout/AuthLayout";
+import { PasswordField, TextField } from "src/components/AuthLayout/fields";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 const MyPhoneInput = PhoneInput.default ? PhoneInput.default : PhoneInput;
-import "react-phone-input-2/lib/style.css";
 
 export default function SignUp() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   const { mutate, isLoading } = useMutation(signUpApi, {
     onSuccess: (data) => {
       toast.success(data?.message);
-
       navigate("/please-verify");
     },
     onError: (error: AxiosError<{ message: string }>) => {
-      if (error.response) {
-        toast.error(error?.response?.data?.message);
-      } else {
-        toast.error(error?.message);
-      }
+      toast.error(error?.response?.data?.message || error?.message);
     },
   });
 
-  const handleOnSubmit = (values: SignUpValues) => {
-    // console.log("The values going to the backend are", values);
-
-    mutate(values);
-    localStorage.setItem("email", values?.email);
-  };
-
-  const formik = useFormik({
+  const formik = useFormik<SignUpValues>({
     initialValues: {
       firstName: "",
       lastName: "",
@@ -72,323 +49,144 @@ export default function SignUp() {
       phoneNumber: "",
     },
     validationSchema: SignUpSchema,
-    onSubmit: handleOnSubmit,
+    onSubmit: (values) => {
+      const payload = {
+        ...values,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        username: values.username.trim(),
+        email: values.email.trim(),
+      };
+      localStorage.setItem("email", payload.email);
+      mutate(payload);
+    },
+  });
+
+  const err = (field: keyof SignUpValues) =>
+    formik.touched[field] && formik.errors[field];
+
+  const bind = (field: keyof SignUpValues) => ({
+    name: field,
+    value: formik.values[field],
+    onChange: formik.handleChange,
+    onBlur: formik.handleBlur,
+    error: err(field),
   });
 
   return (
-    <>
-      <Box hideBelow="lg">
-        <svg
-          style={{ position: "absolute", zIndex: "-1" }}
-          width="568"
-          height="160"
-          viewBox="0 0 568 160"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <ellipse
-            cx="-14.5"
-            cy="-240.5"
-            rx="582.5"
-            ry="400.5"
-            fill="#E5DEFD"
+    <AuthLayout
+      eyebrow="Get started — it's free"
+      title="Create your account"
+      subtitle="Create lessons, share them with learners and keep your study group in one place."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link as={RouteLink} to="/sign-in" color="brand.600" fontWeight={700}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <Box as="form" onSubmit={formik.handleSubmit} noValidate>
+        <Stack spacing="5">
+          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing="4">
+            <TextField
+              label="First name"
+              autoComplete="given-name"
+              placeholder="Ada"
+              {...bind("firstName")}
+            />
+            <TextField
+              label="Last name"
+              autoComplete="family-name"
+              placeholder="Obi"
+              {...bind("lastName")}
+            />
+          </SimpleGrid>
+          <TextField
+            label="Username"
+            autoComplete="username"
+            placeholder="adaobi"
+            {...bind("username")}
           />
-        </svg>
-      </Box>
-      <Flex height={{ base: "100dvh", lg: "100%" }}>
-        <VStack
-          width={{ lg: "50%", base: "0%" }}
-          hideBelow="lg"
-          display="flex"
-          py="2rem"
-          px="1rem"
-        >
-          <Box
-            style={{ position: "absolute", top: "5%", left: "5%" }}
-            width="8rem"
-          >
-            <Image src={logo} alt="Dan Abramov" />
-          </Box>
-          <OnboardingSlides slides={slides} />
-        </VStack>
-        <Box
-          w={{ base: "100%", lg: "50%" }}
-          bg={{ base: "#fafafa" }}
-          py="2rem"
-          px="1rem"
-        >
-          <VStack width={{ md: "100%", lg: "70%" }} margin="auto">
-            <Box width="100%">
-              <Text
-                color="secondary.50"
-                fontSize={{ lg: "1rem", base: "1.5rem" }}
-              >
-                Welcome to easy learning
-              </Text>
-              <Text
-                fontSize={{ lg: "2.1rem", sm: "1rem" }}
-                fontFamily={{ lg: "primary" }}
-                color="black.40"
-              >
-                Let’s get you signed up
-              </Text>
-            </Box>
+          <TextField
+            label="Email address"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            {...bind("email")}
+          />
+
+          <FormControl isInvalid={!!err("phoneNumber")}>
+            <FormLabel htmlFor="phoneNumber">Phone number</FormLabel>
             <Box
-              as="form"
-              width="100%"
-              py="2rem"
-              onSubmit={formik.handleSubmit}
+              sx={{
+                ".react-tel-input .form-control": {
+                  width: "100%",
+                  height: "48px",
+                  borderRadius: "14px",
+                  borderColor: "var(--chakra-colors-ink-200)",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                },
+                ".react-tel-input .form-control:focus": {
+                  borderColor: "var(--chakra-colors-brand-500)",
+                  boxShadow: "0 0 0 1px var(--chakra-colors-brand-500)",
+                },
+                ".react-tel-input .flag-dropdown": {
+                  borderRadius: "14px 0 0 14px",
+                  borderColor: "var(--chakra-colors-ink-200)",
+                  background: "var(--chakra-colors-ink-50)",
+                },
+                ".react-tel-input .selected-flag": {
+                  borderRadius: "14px 0 0 14px",
+                },
+              }}
             >
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  First Name
-                </FormLabel>
-                <Input
-                  type="text"
-                  name="firstName"
-                  id="firstname"
-                  fontSize="sm"
-                  padding="1.6rem 1rem"
-                  bg="#fff"
-                  borderColor="#ddd"
-                  placeholder="Enter Firstname"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.firstName.trim()}
-                />
-                {formik.touched.firstName && formik.errors.firstName ? (
-                  <InputError error={formik.errors.firstName} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Last Name
-                </FormLabel>
-                <Input
-                  type="text"
-                  name="lastName"
-                  id="lastname"
-                  fontSize="sm"
-                  padding="1.6rem 1rem"
-                  bg="#fff"
-                  borderColor="#ddd"
-                  placeholder="Enter Lastname"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.lastName.trim()}
-                />
-                {formik.touched.lastName && formik.errors.lastName ? (
-                  <InputError error={formik.errors.lastName} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Username
-                </FormLabel>
-                <Input
-                  type="text"
-                  name="username"
-                  id="name"
-                  fontSize="sm"
-                  padding="1.6rem 1rem"
-                  bg="#fff"
-                  borderColor="#ddd"
-                  placeholder="Enter Username"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.username.trim()}
-                />
-                {formik.touched.username && formik.errors.username ? (
-                  <InputError error={formik.errors.username} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Email
-                </FormLabel>
-                <Input
-                  type="text"
-                  name="email"
-                  id="email"
-                  fontSize="sm"
-                  padding="1.6rem 1rem"
-                  bg="#fff"
-                  borderColor="#ddd"
-                  placeholder="Enter your Email Address"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.email.trim()}
-                />
-                {formik.touched.email && formik.errors.email ? (
-                  <InputError error={formik.errors.email} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Password
-                </FormLabel>
-                <InputGroup>
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    id="password"
-                    fontSize="sm"
-                    padding="1.6rem 1rem"
-                    bg="#fff"
-                    borderColor="#ddd"
-                    placeholder="Enter your Password"
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.password.trim()}
-                  />
-                  <InputRightElement h="100%" pr="1rem">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-
-                {}
-                {formik.touched.password && formik.errors.password ? (
-                  <InputError error={formik.errors.password} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Confirm Password
-                </FormLabel>
-                <InputGroup>
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    id="confirmpassword"
-                    fontSize="sm"
-                    padding="1.6rem 1rem"
-                    bg="#fff"
-                    borderColor="#ddd"
-                    placeholder="Re-enter your Password"
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.confirmPassword.trim()}
-                  />
-                  <InputRightElement h="100%" pr="1rem">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    >
-                      {showConfirmPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                {formik.touched.confirmPassword &&
-                formik.errors.confirmPassword ? (
-                  <InputError error={formik.errors.confirmPassword} />
-                ) : null}
-              </FormControl>
-
-              <FormControl mb="1.5rem">
-                <FormLabel fontSize="sm" color="black.40">
-                  Phone Number{" "}
-                </FormLabel>
-                <MyPhoneInput
-                  country={"ng"}
-                  regions={["africa"]}
-                  containerClass={"10px"}
-                  containerStyle={{
-                    display: "flex",
-                    gap: "1rem",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    flexDirection: "row-reverse",
-                  }}
-                  inputStyle={{
-                    width: "100%",
-                    height: "2.5rem",
-                    outline: "transparent solid 2px",
-                    padding: "1.6rem 1rem",
-                    borderColor: "#ddd",
-                  }}
-                  buttonStyle={{
-                    position: "static",
-                    height: "100%",
-                    padding: "1.6rem",
-                    backgroundColor: "#fff",
-                    borderRadius: "5px",
-                    borderColor: "#ddd",
-                  }}
-                  value={formik.values.phoneNumber}
-                  onChange={(e: () => void) =>
-                    formik.setFieldValue("phoneNumber", e)
-                  }
-                  onBlur={formik.handleBlur("phoneNumber")}
-                />
-                {formik.touched.phoneNumber && formik.errors.phoneNumber ? (
-                  <InputError error={formik.errors.phoneNumber} />
-                ) : null}
-              </FormControl>
-
-              <Box display="flex" justifyContent="center">
-                <Button
-                  width="100%"
-                  p="1.5rem"
-                  color="neutral.50"
-                  bgColor="primary.50"
-                  type="submit"
-                  disabled={!(formik.dirty && formik.isValid)}
-                >
-                  {isLoading ? (
-                    <Spinner size="sm" thickness="4px" />
-                  ) : (
-                    "Sign up"
-                  )}
-                </Button>
-              </Box>
-              <Box mt="1rem">
-                <Text textAlign="center">
-                  Already have an account?{" "}
-                  <Link as={RouteLink} to="/sign-in" color="primary.50">
-                    Sign in
-                  </Link>
-                </Text>
-              </Box>
+              <MyPhoneInput
+                country="ng"
+                regions={["africa"]}
+                inputProps={{ id: "phoneNumber", name: "phoneNumber" }}
+                value={formik.values.phoneNumber}
+                onChange={(value: string) =>
+                  formik.setFieldValue("phoneNumber", value)
+                }
+                onBlur={formik.handleBlur("phoneNumber")}
+              />
             </Box>
-          </VStack>
-        </Box>
-      </Flex>
-      <Box
-        hideBelow="lg"
-        style={{
-          position: "absolute",
-          zIndex: "-2",
-          bottom: "0",
-          overflow: "hidden",
-          width: "50%",
-          height: "5rem",
-        }}
-      >
-        <svg
-          style={{ position: "absolute", bottom: "-20px" }}
-          width="708"
-          height="85"
-          viewBox="0 0 708 85"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <ellipse cx="353.5" cy="400.5" rx="582.5" ry="400.5" fill="#E5DEFD" />
-        </svg>
+            {err("phoneNumber") && (
+              <FormErrorMessage fontSize="xs">
+                {err("phoneNumber")}
+              </FormErrorMessage>
+            )}
+          </FormControl>
+
+          <PasswordField
+            label="Password"
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            {...bind("password")}
+          />
+          <PasswordField
+            label="Confirm password"
+            autoComplete="new-password"
+            placeholder="Re-enter your password"
+            {...bind("confirmPassword")}
+          />
+
+          <Button
+            type="submit"
+            colorScheme="brand"
+            h="52px"
+            w="full"
+            isLoading={isLoading}
+            loadingText="Creating account"
+            isDisabled={!(formik.dirty && formik.isValid)}
+          >
+            Create account
+          </Button>
+        </Stack>
       </Box>
-    </>
+    </AuthLayout>
   );
 }

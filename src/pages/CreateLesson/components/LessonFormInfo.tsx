@@ -218,7 +218,7 @@ const LessonFormInfo: React.FC = () => {
               >
                 <Image
                   src={state.mediaFile || dummyImg}
-                  alt="Klosanaw"
+                  alt="Klosanow"
                   w="100%"
                   h="100%"
                 />

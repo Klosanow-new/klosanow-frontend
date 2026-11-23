@@ -25,7 +25,7 @@ export function savedwithExp(
 ) {
   const now = new Date();
 
-  let exp = days * 86400; // secs in a day
+  const exp = days * 86400 * 1000; // ms in `days` days
 
   const item = {
     ...value,

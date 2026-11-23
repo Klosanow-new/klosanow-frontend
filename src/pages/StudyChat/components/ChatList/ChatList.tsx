@@ -38,7 +38,7 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
     <Box width="100%" maxWidth="523px" bg="#fafafa" p="24px 30px">
       <Flex justifyContent="space-between" mb="24px" alignItems="center">
         <Heading
-          fontFamily="Playfair Display, serif"
+          fontFamily="heading"
           fontSize={["18px", "24px"]}
         >
           All Chats ({list?.length})
@@ -47,7 +47,7 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
         <Flex align="center" gap="6px">
           <Box
             as="button"
-            display={["flex", "none"]}
+            display={{ base: "flex", md: "none" }}
             onClick={() => navigate(contactsPagePath)}
           >
             <ContactIcon />
@@ -96,7 +96,7 @@ const ChatList: React.FC<ChatListProps> = ({ list }) => {
           gap="20px"
           flexDir="column"
           h="598px"
-          overflowY="scroll"
+          overflowY="auto"
           className="scrollbar"
           pr={{
             base: "5px",
