@@ -3,6 +3,9 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Let certificate (ACME) challenges through over plain HTTP.
+  RewriteRule ^\.well-known/ - [L]
+
   # Force HTTPS
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
